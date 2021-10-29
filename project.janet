@@ -19,7 +19,6 @@
 
 
 (task "dev-deps" []
-      (pp (dyn :meta))
   (if-let [deps (project-meta :dev-dependencies)]
     (each dep deps
       (bundle-install dep))
