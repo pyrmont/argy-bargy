@@ -43,14 +43,31 @@ Argy-Bargy can be used like this:
             :help "The option foo takes a single value."}
    "--bar" {:kind :flag
             :help "The option bar is a flag."}
-   :srcs {:help "The source file for the program."
-            :rest true}])
+   :srcs {:help "The source files for the program."
+          :rest true}])
 
 (def info
   {:about "A program that does something to the SRCS parameters."
    :rider "For more information, visit our website at example.com/program."})
 
 (argy-bargy/parse rules info)
+```
+
+If the argument is `--help`, the following will be printed to stdout:
+
+```text
+usage: example [OPTION]... [SRCS...]
+
+A program that does something to the SRCS parameters.
+
+ SRCS    The source files for the program.
+
+  Optional:
+       --bar          The option bar is a flag.
+       --foo VALUE    The option foo takes a single value.
+   -h, --help         Show this help message.
+
+For more information, visit our website at example.com/program.
 ```
 
 ## API
