@@ -14,3 +14,5 @@ jobs:
     steps:
     - name: "Test project"
       uses: pyrmont/action-janet-test@master
+      with:
+        jpm-pre-test: "dev-deps"
