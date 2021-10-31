@@ -62,10 +62,10 @@ A program that does something to the SRCS parameters.
 
  SRCS    The source files for the program.
 
-  Optional:
-       --bar          The option bar is a flag.
-       --foo VALUE    The option foo takes a single value.
-   -h, --help         Show this help message.
+ Optional:
+      --bar          The option bar is a flag.
+      --foo VALUE    The option foo takes a single value.
+  -h, --help         Show this help message.
 
 For more information, visit our website at example.com/program.
 ```
