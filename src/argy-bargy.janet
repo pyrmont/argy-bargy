@@ -13,7 +13,7 @@
 
 (defn- long-opts
   ```
-  Filter short options from option rules.
+  Filter short options from option rules
   ```
   [opts]
   (filter (fn [[name _]] (not (one? (length name)))) (pairs opts)))
@@ -21,7 +21,7 @@
 
 (defn- get-cols
   ```
-  Get the columns in the terminal.
+  Get the columns in the terminal
   ```
   []
   (def p (os/spawn ["tput" "cols"] :p {:out :pipe :err :pipe}))
@@ -32,8 +32,10 @@
 
 (defn- indent-str
   ```
-  Indent a string by a number of spaces at the start. If a maximum width is
-  provided, wrap and indent lines by the hanging padding.
+  Indent a string by a number of spaces at the start
+
+  If a maximum width is provided, wrap and indent lines by the
+  hanging padding.
   ```
   [str startp &opt hangp maxw]
   (default hangp startp)
@@ -54,7 +56,7 @@
 
 (defn- usage-error
   ```
-  Print the usage error message to stderr.
+  Print the usage error message to stderr
   ```
   [& msg]
   (unless errored?
@@ -65,7 +67,7 @@
 
 (defn- usage
   ```
-  Print the usage message.
+  Print the usage message
   ```
   []
   (set errored? true)
@@ -79,10 +81,11 @@
     (each example (info :examples)
       (print example))
     (do
-      (prin "usage: " command " ")
+      (prin "usage: " command)
       (unless (zero? (length orules))
-        (prin "[OPTION]... "))
+        (prin " [OPTION]..."))
       (each [name rule] prules
+        (prin " ")
         (cond
           (and (rule :rest) (rule :required))
           (prin (string/ascii-upper name) "...")
@@ -90,7 +93,7 @@
           (rule :rest)
           (prin "[" (string/ascii-upper name) "...]")
 
-          (prin (string/ascii-upper name) " ")))
+          (prin (string/ascii-upper name))))
       (print)))
 
   (when (info :about)
@@ -164,7 +167,7 @@
 
 (defn- usage-subcommands
   ```
-  Print a usage message about subcommands.
+  Print a usage message about subcommands
   ```
   []
   (set errored? true)
@@ -206,7 +209,7 @@
 
 (defn- convert
   ```
-  Convert a textual value using the converter.
+  Convert a textual value using the converter
 
   Internal functions are called if the converter is one of the following:
 
@@ -233,7 +236,7 @@
 
 (defn- consume-option
   ```
-  Consume an option.
+  Consume an option
   ```
   [rules oargs args i &opt is-short?]
   (def arg (in args i))
@@ -270,7 +273,7 @@
 
 (defn- rest-capture
   ```
-  Get the parameter that captures the rest of the values (if available).
+  Get the parameter that captures the rest of the values (if defined)
   ```
   [rules]
   (when-let [[name rule] (last rules)]
@@ -279,7 +282,7 @@
 
 (defn- consume-param
   ```
-  Consume a parameter.
+  Consume a parameter
   ```
   [rules pargs args i]
   (def pos (length pargs))
@@ -298,7 +301,9 @@
 
 (defn- conform-args
   ```
-  Conform arguments. In particular, split short-options out if provided together.
+  Conform arguments
+
+  In particular, split short-options out if provided together.
   ```
   [args]
   (def res @[])
@@ -313,7 +318,7 @@
 
 (defn- conform-rules
   ```
-  Conform rules.
+  Conform rules
   ```
   [rules]
   (unless (even? (length rules))
@@ -354,22 +359,67 @@
 
 (defn parse
   ```
-  Parse the `(dyn :args)` value for a program.
+  Parse the `(dyn :args)` value for a program
 
-  This function uses given rules.
+  This function takes a user-defined `rules` tuple  and parses the values in
+  the dynamic variable `:args` according to the rules. The tuple is a series of
+  key-value pairs.
+
+  If the key is a string, the rule will be applied to option arguments
+  (arguments that begin with a `-` or `--`). The value is a struct that can
+  have the following keys:
+
+  * `:kind` - The kind of option. Values are `:flag`, `:count`, `:single` and
+    `:multi`. A flag is a binary choice (e.g. true/false, on/off) that can
+    only occur once. A count is a monotonically increasing integral value that
+    can occur one or more times. A single is a value that can only occur once.
+    A multi is a value that can occur one or more times.
+  * `:short` - A single letter that is used with `-` rather than `--` and can
+    be combined with other short options (e.g. `-lah`).
+  * `:help` - The help text for the option, displayed in the usage message.
+  * `:default` - A default value that is used if the option occurs.
+  * `:required` - Whether the option is required to occur.
+  * `:value` - A one-argument function that converts the text that is parsed to
+    another kind of value. This function can be used for validation. If the
+    return value is `nil`, the input is considered to fail parsing and a usage
+    error message is printed instead.  Instead of a function, a keyword can be
+    provided and Argy-Bargy's internal converter will be used instead. The
+    valid keywords are :string and :integer.
+
+  If the key is a keyword, the rule will be applied to parameter arguments
+  (arguments that are not options). The value is a struct that can have the
+  following keys:
+
+  * `:help` - The help text for the parameter, displayed in the usage message.
+  * `:default` - A default value that is used if the parameter does not occur.
+  * `:required` - Whether the parameter is required to occur.
+  * `:value` - A one-argument function that converts the textual value that is
+    parsed to a value that will be returned in the return struct. This function
+    can be used for validation. If the return value is `nil`, the input is
+    considered to fail parsing and a usage error message is printed instead.
+    Instead of a function, a keyword can be provided and Argy-Bargy's converter
+    will be used instead. The valid keywords are :string and :integer.
+  * `:rest` - Whether this rule should capture all following parameters. Only
+    one parameter rule can have `:rest` set to `true`.
+
+  A user can also provide an `info` struct that contains descriptions that will
+  be used in usage messages that are output in response to user input.
+
+  Once parsed, the return value is a strruct with `:opts` and `:params` keys.
+  The value associated with each key is a table containing the values parsed
+  for each matching rule.
   ```
   [rules &opt info has-command?]
-  (def [orules prules] (conform-rules rules))
-
+  (set errored? false)
   (def oargs @{})
   (def pargs @{})
 
   (def args (conform-args (dyn :args)))
   (def num-args (length args))
-
   (var i (if has-command? 2 1))
-
   (set command (string/join (array/slice args 0 i) " "))
+
+  (def [orules prules] (conform-rules rules))
   (put config :info info)
   (put config :orules orules)
   (put config :prules prules)
@@ -407,12 +457,21 @@
         (put oargs name (rule :default)))))
 
   (unless errored?
-    [oargs pargs]))
+    {:opts oargs :params pargs}))
 
 
-(defn parse-with-cmds
+(defn parse-with-subcommands
   ```
-  Parse the `(dyn :args)` value where that value is for a program with subcommands.
+  Parse the `(dyn :args)` value for a program with subcommands
+
+  The function requires an `info` struct with information for the top-level
+  usage messages (this can be empty). In addition, a series of key-value pairs
+  should be provided with the key being the name of the subcommand and the
+  value being a tuple of rules and info that match the values expected by
+  `parse`.
+
+  The return value is the same struct returned by `parse` but with one
+  additional key, `:sub`. The value is a string with the matching subcommand.
   ```
   [info &keys configs]
   (def num-args (dyn :args))
@@ -423,18 +482,18 @@
   (put config :info info)
   (put config :srules configs)
 
-  (def arg-1 (get (dyn :args) 1))
+  (def scommand (get (dyn :args) 1))
   (cond
     (or (one? num-args)
-        (= "--help" arg-1)
-        (= "-h" arg-1))
+        (= "--help" scommand)
+        (= "-h" scommand))
     (usage-subcommands)
 
-    (string/has-prefix? "-" arg-1)
-    (usage-error "unrecognized option '" arg-1 "'")
+    (string/has-prefix? "-" scommand)
+    (usage-error "unrecognized option '" scommand "'")
 
-    (nil? (configs arg-1))
-    (usage-error "unrecognized command '" arg-1 "'")
+    (nil? (configs scommand))
+    (usage-error "unrecognized command '" scommand "'")
 
-    (let [[args info] (configs arg-1)]
-      (parse args info true))))
+    (let [[args info] (configs scommand)]
+      (put (parse args info true) :sub scommand))))
