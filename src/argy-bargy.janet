@@ -268,7 +268,7 @@
               (+ 2 i))
             (usage-error "value passed to " arg " is invalid"))
           (usage-error "no value after option of type " kind))))
-      (usage-error "unrecognized option '" arg "'")))
+    (usage-error "unrecognized option '" arg "'")))
 
 
 (defn- rest-capture
