@@ -322,7 +322,7 @@
   ```
   [rules]
   (unless (even? (length rules))
-    (error "number of elements in rules must be even"))
+    (errorf "number of elements in rules must be even: %p" rules))
   (def orules @{})
   (def prules @[])
   (var rest-capture? false)
@@ -333,20 +333,20 @@
 
   (each [k v] (partition 2 rules)
     (unless (or (string? k) (keyword? k))
-      (error "names of rules must be strings or keywords"))
+      (errorf "names of rules must be strings or keywords: %p" k))
     (unless (or (struct? v) (table? v))
-      (error "each rule must be struct or struct or table"))
+      (errorf "each rule must be struct or struct or table: %p" v))
     (unless (or (keyword? k) ({:flag true :count true :single true :multi true} (v :kind)))
-      (error "each option rule must be of kind :flag, :count, :single or :multi"))
+      (errorf "each option rule must be of kind :flag, :count, :single or :multi: %p" v))
     (when (and (keyword? k) rest-capture?)
-      (error "parameter rules cannot occur after rule that captures :rest"))
+      (errorf "parameter rules cannot occur after rule that captures :rest: %p" v))
     (cond
       (string? k)
       (let [name (if (string/has-prefix? "--" k) (string/slice k 2) k)]
         (when (string/has-prefix? "-" name)
-          (error "long option name must be provided"))
+          (errorf "long option name must be provided: %p" name))
         (unless (> (length name) 2)
-          (error "option names must be at least two characters"))
+          (errorf "option names must be at least two characters: %p" name))
         (put orules name v)
         (put orules (v :short) v))
 
