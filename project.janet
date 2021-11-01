@@ -18,7 +18,7 @@
 (def project-meta (dyn :project))
 
 
-(task "dev-deps" []
+(rule "dev-deps" []
   (if-let [deps (project-meta :dev-dependencies)]
     (each dep deps
       (bundle-install dep))
