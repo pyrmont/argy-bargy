@@ -447,8 +447,8 @@
     (each [name rule] prules
       (when (nil? (pargs name))
         (if (rule :required)
-          (usage-error (string/ascii-upper name) " is required"))
-          (put pargs name (rule :default))))
+          (usage-error (string/ascii-upper name) " is required")
+          (put pargs name (rule :default)))))
 
     (each [name rule] (long-opts orules)
       (when (nil? (oargs name))
