@@ -474,7 +474,7 @@
   additional key, `:sub`. The value is a string with the matching subcommand.
   ```
   [info &keys configs]
-  (def num-args (dyn :args))
+  (def num-args (length (dyn :args)))
 
   (def pcommand (in (dyn :args) 0))
 
