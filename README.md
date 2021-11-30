@@ -87,7 +87,7 @@ For more information, visit our website at example.com/program.
           :help  "Run the foo command."}
    "bar" {:rules {:kind :flag
                   :help "The option bar is a flag."}
-          :help  "Run the bar command."})
+          :help  "Run the bar command."}})
 
 (def info
   {:about "A program that provides subcommands that do something."
