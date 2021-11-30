@@ -1,15 +1,30 @@
 # Global values
 
+(def- dir-sep "/")
 (def- max-width 120)
 (def- pad-inset 4)
 (def- pad-right 6)
 
+(var- cols nil)
 (var- command "")
-(def- config @{:info {} :orules {} :prules [] :srules {}})
 (var- errored? false)
 
 
-# Functions
+# Utility functions
+
+(defn- get-cols
+  ```
+  Get the columns in the terminal
+  ```
+  []
+  (if (nil? cols)
+    (do
+      (def p (os/spawn ["tput" "cols"] :p {:out :pipe :err :pipe}))
+      (def err (:wait p))
+      (def tcols (when (zero? err) (-> (p :out) (:read :all) string/trim scan-number)))
+      (min (or tcols max-width) max-width))
+    cols))
+
 
 (defn- long-opts
   ```
@@ -19,15 +34,43 @@
   (filter (fn [[name _]] (not (one? (length name)))) (pairs opts)))
 
 
-(defn- get-cols
+(defn- split-words
   ```
-  Get the columns in the terminal
+  Split a string into words
   ```
-  []
-  (def p (os/spawn ["tput" "cols"] :p {:out :pipe :err :pipe}))
-  (def err (:wait p))
-  (def cols (if (zero? err) (-> (p :out) (:read :all) string/trim scan-number)))
-  (min (or cols max-width) max-width))
+  [str]
+  (def res @[])
+  (def buf @"")
+  (var i 0)
+  (while (def curr-c (get str i))
+    (++ i)
+    (if (not (or (= 32 curr-c) (= 10 curr-c)) )
+      (buffer/push buf curr-c)
+      (when-let [next-c (get str i)]
+        (++ i)
+        (array/push res (string buf))
+        (buffer/clear buf)
+        (cond
+          (= 10 next-c)
+          (array/push res (string/from-bytes curr-c next-c))
+
+          (= 32 next-c)
+          nil
+
+          (buffer/push buf next-c)))))
+  (unless (empty? buf)
+    (array/push res (string buf)))
+  res)
+
+
+(defn- stitch
+  ```
+  Stitch together components into a string, only adding a separator when
+  adjacent components are non-nil
+  ```
+  [parts &opt sep]
+  (default sep " ")
+  (string/join (filter truthy? parts) sep))
 
 
 (defn- indent-str
@@ -38,21 +81,37 @@
   hanging padding.
   ```
   [str startp &opt hangp maxw]
-  (default hangp startp)
-  (default maxw math/inf)
-  (def res (buffer (string/repeat " " (dec startp))))
-  (def words (->> (string/split " " str) (filter |(not (empty? $)))))
-  (var currw hangp)
-  (each word words
-    (if (< (+ currw 1 (length word)) maxw)
+  (default hangp 0)
+  (default maxw cols)
+  (def res (buffer (string/repeat " " startp)))
+  (var currw (- hangp startp))
+  (var first? true)
+  (each word (split-words str)
+    (cond
+      first?
+      (do
+        (buffer/push res word)
+        (+= currw (length word))
+        (set first? false))
+
+      (= "\n\n" word)
+      (do
+        (buffer/push res word (string/repeat " " hangp))
+        (set currw hangp)
+        (set first? true))
+
+      (< (+ currw 1 (length word)) maxw)
       (do
         (buffer/push res " " word)
         (+= currw (+ 1 (length word))))
+
       (do
         (buffer/push res "\n" (string/repeat " " hangp) word)
         (set currw (+ hangp (length word))))))
   res)
 
+
+# Usage messages
 
 (defn- usage-error
   ```
@@ -65,17 +124,114 @@
     (eprint "Try '" command " --help' for more information.")))
 
 
+(defn- usage-parameters
+  ```
+  Print the usage descriptions for the parameters
+  ```
+  [info prules]
+  (def pfrags @[])
+  (var ppad 0)
+
+  (each [name rule] prules
+    (def usage-prefix
+      (stitch [""
+               (string/ascii-upper name)
+               (when (or (= :single (rule :kind)) (= :multi (rule :kind)))
+                 (or (rule :value-name) "<value>"))
+               (rule :default)]))
+    (def usage-help
+      (stitch [(rule :help)
+               (when (rule :default)
+                 (string "(Default: " (rule :default) ")"))]))
+    (array/push pfrags [usage-prefix usage-help])
+    (set ppad (max (+ pad-inset (length usage-prefix)) ppad)))
+
+  (unless (empty? pfrags)
+    (print)
+    (when (info :params)
+      (print (info :params)))
+    (each [prefix help] pfrags
+      (def startp (- ppad (length prefix)))
+      (print prefix (indent-str help startp ppad (- cols pad-right))))))
+
+
+(defn- usage-options
+  ```
+  Print the usage descriptions for the options
+  ```
+  [info orules]
+  (def ofrags @{:req @[] :opt @[]})
+  (def opad @{:req 0 :opt 0})
+
+  (each [name rule] (sort (long-opts orules))
+    (def usage-prefix
+      (stitch [""
+               (if (rule :short)
+                 (string "-" (rule :short) ",")
+                 "   ")
+               (string "--" name)
+               (when (or (= :single (rule :kind)) (= :multi (rule :kind)))
+                 (or (rule :value-name) (string/ascii-upper name)))
+               # (when (rule :default)
+               #   (string "<" (rule :default) ">"))
+               ]))
+    (def usage-help
+      (stitch [(rule :help)
+               (when (rule :default)
+                 (string "(Default: " (rule :default) ")"))]))
+    (def k (if (rule :required) :req :opt))
+    (array/push (ofrags k) [usage-prefix usage-help])
+    (put opad k (max (+ pad-inset (length usage-prefix)) (opad k))))
+
+  (unless (and (zero? (ofrags :req))
+               (zero? (ofrags :opt)))
+    (print)
+    (when (info :opts)
+      (print (info :opts))))
+
+  (each k [:req :opt]
+    (unless (empty? (ofrags k))
+      (print " " (if (= k :req) "Required" "Optional") ":")
+      (each [prefix help] (ofrags k)
+        (def startp (- (opad k) (length prefix)))
+        (print prefix (indent-str help startp (opad k) (- cols pad-right)))))))
+
+
+(defn- usage-subcommands
+  ```
+  Print the usage descriptions for the subcommands
+  ```
+  [info subcommands]
+  (def sfrags @[])
+  (var spad 0)
+
+  (each [subcommand {:help help}] (sort (pairs subcommands))
+    (def usage-prefix (string " " subcommand))
+    (def usage-help (or help ""))
+    (array/push sfrags [usage-prefix usage-help])
+    (set spad (max (+ pad-inset (length usage-prefix)) spad)))
+
+  (unless (empty? sfrags)
+    (print)
+    (when (info :subcmds)
+      (print (info :subcmds)))
+    (each [prefix help] sfrags
+      (def startp (- spad (length prefix)))
+      (print prefix (indent-str help startp spad (- cols pad-right))))
+    (print)
+    (print "For more information on each subcommand, type '" command " help <subcommand>'.")))
+
+
 (defn- usage
   ```
   Print the usage message
   ```
-  []
+  [&opt info [orules prules]]
   (set errored? true)
 
-  (def cols (get-cols))
-  (def info (get config :info {}))
-  (def orules (get config :orules {}))
-  (def prules (get config :prules []))
+  (default info {})
+  (default orules {})
+  (default prules [])
 
   (if (info :examples)
     (each example (info :examples)
@@ -98,114 +254,41 @@
 
   (when (info :about)
     (print)
-    (print (info :about)))
+    (print (indent-str (info :about) 0)))
 
-  (when (info :param-intro)
-    (print)
-    (print (info :param-intro)))
-
-  (def pfrags @[])
-  (var ppad 0)
-
-  (each [name rule] prules
-    (def usage-prefix
-      (string
-        " " (string/ascii-upper name)
-        ;(if (or (= :single (rule :kind)) (= :multi (rule :kind)))
-          [" " (or (rule :value-name) "VALUE")]
-          [])
-        ;(if (rule :default)
-          ["=" (rule :default)]
-          [])))
-    (def usage-help (or (-?>> (rule :help) (string/replace-all "\n" " ")) ""))
-    (array/push pfrags [usage-prefix usage-help])
-    (set ppad (max (+ pad-inset (length usage-prefix)) ppad)))
-
-  (unless (empty? pfrags)
-    (print)
-    (each [prefix help] pfrags
-      (def startp (- ppad (length prefix)))
-      (print prefix (indent-str help startp ppad (- cols pad-right)))))
-
-  (when (info :option-intro)
-    (print)
-    (print (info :option-intro)))
-
-  (def ofrags @{:req @[] :opt @[]})
-  (def opad @{:req 0 :opt 0})
-
-  (each [name rule] (sort (long-opts orules))
-    (def usage-prefix
-      (string
-        ;(if (rule :short)
-          [" -" (rule :short) ","]
-          ["    "])
-        " --" name
-        ;(if (or (= :single (rule :kind)) (= :multi (rule :kind)))
-          [" " (or (rule :value-name) "VALUE")]
-          [])
-        ;(if (rule :default)
-          ["=" (rule :default)]
-          [])))
-    (def usage-help (or (-?>> (rule :help) (string/replace-all "\n" " ")) ""))
-    (def k (if (rule :required) :req :opt))
-    (array/push (ofrags k) [usage-prefix usage-help])
-    (put opad k (max (+ pad-inset (length usage-prefix)) (opad k))))
-
-  (each k [:req :opt]
-    (unless (empty? (ofrags k))
-      (print)
-      (print " " (if (= k :req) "Required" "Optional") ":")
-      (each [prefix help] (ofrags k)
-        (def startp (- (opad k) (length prefix)))
-        (print prefix (indent-str help startp (opad k) (- cols pad-right))))))
+  (usage-parameters info prules)
+  (usage-options info orules)
 
   (when (info :rider)
     (print)
-    (print (info :rider))))
+    (print (indent-str (info :rider) 0))))
 
 
-(defn- usage-subcommands
+(defn- usage-with-subcommands
   ```
-  Print a usage message about subcommands
+  Print the usage message with subcommands
   ```
-  []
+  [info [orules subcommands]]
   (set errored? true)
-
-  (def cols (get-cols))
-  (def info (get config :info {}))
-  (def rules (get config :srules {}))
 
   (if (info :examples)
     (each example (info :examples)
       (print example))
-    (prin "usage: " command " <command> <args>"))
+    (print "usage: " command " <subcommand> [args...]"))
 
   (when (info :about)
     (print)
-    (print (info :about)))
+    (print (indent-str (info :about) 0)))
 
-  (def frags @[])
-  (var pad 0)
-
-  (each [command [_ info]] (sort (pairs rules))
-    (def usage-prefix (string " " command))
-    (def usage-help (or (-?>> (info :help) (string/replace-all "\n" " ")) ""))
-    (array/push frags [usage-prefix usage-help])
-    (set pad (max (+ pad-inset (length usage-prefix)) pad)))
-
-  (unless (empty? frags)
-    (print)
-    (print "The following subcommands are available:")
-    (print)
-    (each [prefix help] frags
-      (def startp (- pad (length prefix)))
-      (print prefix (indent-str help startp pad (- cols pad-right)))))
+  (usage-options info orules)
+  (usage-subcommands info subcommands)
 
   (when (info :rider)
     (print)
-    (print (info :rider))))
+    (print (indent-str (info :rider) 0))))
 
+
+# Processing functions
 
 (defn- convert
   ```
@@ -238,15 +321,12 @@
   ```
   Consume an option
   ```
-  [rules oargs args i &opt is-short?]
+  [orules oargs args i &opt is-short?]
   (def arg (in args i))
-  (def name (string/slice (in args i) (if is-short? 1 2)))
-  (if-let [rule (rules name)
+  (def name (string/slice arg (if is-short? 1 2)))
+  (if-let [rule (orules name)
            kind (rule :kind)]
     (case kind
-      :help
-      (usage)
-
       :flag
       (do
         (put oargs name true)
@@ -259,14 +339,14 @@
 
       (if (or (= kind :single)
               (= kind :multi))
-        (if-let [arg (get args (inc i))]
-          (if-let [val (convert arg (rule :value))]
+        (if-let [input (get args (inc i))]
+          (if-let [val (convert input (rule :value))]
             (do
               (case kind
                 :single (put oargs name val)
                 :multi  (put oargs name (array/push (or (oargs name) @[]) val)))
               (+ 2 i))
-            (usage-error "value passed to " arg " is invalid"))
+            (usage-error "'" input "' is invalid value for " arg))
           (usage-error "no value after option of type " kind))))
     (usage-error "unrecognized option '" arg "'")))
 
@@ -284,11 +364,11 @@
   ```
   Consume a parameter
   ```
-  [rules pargs args i]
+  [prules pargs args i]
   (def pos (length pargs))
-  (if-let [[name rule] (or (get rules pos)
-                           (rest-capture rules))]
-    (if-let [arg (in args i)
+  (if-let [[name rule] (or (get prules pos)
+                           (rest-capture prules))]
+    (if-let [arg (get args i)
              val (convert arg (rule :value))]
       (do
         (if (rule :rest)
@@ -314,6 +394,17 @@
   (each arg args
     (array/concat res (peg/match grammar arg)))
   res)
+
+
+(defn- conform-cmds
+  ```
+  Conform commands
+  ```
+  [args &opt has-subcommand?]
+  (def pcmd (->> (get args 0) (string/split dir-sep) last))
+  (if has-subcommand?
+    (string pcmd " " (get args 1))
+    pcmd))
 
 
 (defn- conform-rules
@@ -357,17 +448,27 @@
   [orules prules])
 
 
-(defn parse
+# Parsing functions
+
+(defn parse-args
   ```
   Parse the `(dyn :args)` value for a program
 
-  This function takes a user-defined `rules` tuple  and parses the values in
-  the dynamic variable `:args` according to the rules. The tuple is a series of
-  key-value pairs.
+  This function takes a `config` struct containing the following keys:
+
+  * `:rules` - Tuple of rules to use to parse the arguments.
+  * `:info` - Struct of messages to use in help output.
+
+  ### Rules
+
+  The dynamic variable `:args` is parsed according to the rules tuple. This
+  tuple is a series of key-value pairs.
+
+  #### Options
 
   If the key is a string, the rule will be applied to option arguments
-  (arguments that begin with a `-` or `--`). The value is a struct that can
-  have the following keys:
+  (arguments that begin with a `-` or `--`). The value associated with each key
+  is a struct that can have the following keys:
 
   * `:kind` - The kind of option. Values are `:flag`, `:count`, `:single` and
     `:multi`. A flag is a binary choice (e.g. true/false, on/off) that can
@@ -386,60 +487,73 @@
     provided and Argy-Bargy's internal converter will be used instead. The
     valid keywords are :string and :integer.
 
-  If the key is a keyword, the rule will be applied to parameter arguments
-  (arguments that are not options). The value is a struct that can have the
-  following keys:
+  #### Parameters
 
-  * `:help` - The help text for the parameter, displayed in the usage message.
-  * `:default` - A default value that is used if the parameter does not occur.
-  * `:required` - Whether the parameter is required to occur.
-  * `:value` - A one-argument function that converts the textual value that is
+  If the key is a keyword, the rule will be applied to parameter arguments
+  (arguments that are not options). The value associated with each key is a
+  struct that can have the following keys:
+
+  * `:help` - Help text for the parameter, displayed in the usage message.
+  * `:default` - Default value that is used if the parameter does not occur.
+  * `:required` - Whether the parameter is required to exist.
+  * `:value` - One-argument function that converts the textual value that is
     parsed to a value that will be returned in the return struct. This function
     can be used for validation. If the return value is `nil`, the input is
     considered to fail parsing and a usage error message is printed instead.
     Instead of a function, a keyword can be provided and Argy-Bargy's converter
-    will be used instead. The valid keywords are :string and :integer.
+    will be used instead. The valid keywords are `:string` and `:integer`.
   * `:rest` - Whether this rule should capture all following parameters. Only
     one parameter rule can have `:rest` set to `true`.
 
-  A user can also provide an `info` struct that contains descriptions that will
-  be used in usage messages that are output in response to user input.
+  ### Info
 
-  Once parsed, the return value is a strruct with `:opts` and `:params` keys.
+  The info struct contains messages that are used in the usage help. The struct
+  can have the following keys:
+
+  * `:about` - Message describing the program at a high level.
+  * `:examples` - Collection of examples to be used in usage message.
+  * `:opts` - Message printed immediately prior to listing of options.
+  * `:params` - Message printed immediately prior to listing of parameters.
+  * `:rider` - Message printed at the end of the usage message.
+
+  ### Return Value
+
+  Once parsed, the return value is a table with `:opts` and `:params` keys.
   The value associated with each key is a table containing the values parsed
   for each matching rule.
   ```
-  [rules &opt info has-command?]
+  [config &opt has-subcommand?]
+  (set cols (get-cols))
+  (set command (conform-cmds (dyn :args) has-subcommand?))
   (set errored? false)
   (def oargs @{})
   (def pargs @{})
 
-  (def args (conform-args (dyn :args)))
-  (def num-args (length args))
-  (var i (if has-command? 2 1))
-  (set command (string/join (array/slice args 0 i) " "))
+  (def [orules prules] (conform-rules (get config :rules [])))
 
-  (def [orules prules] (conform-rules rules))
-  (put config :info info)
-  (put config :orules orules)
-  (put config :prules prules)
+  (def all-args (conform-args (dyn :args)))
+  (def num-args (length all-args))
+  (var i (if has-subcommand? 2 1))
 
   (while (< i num-args)
-    (def arg (in args i))
+    (def arg (get all-args i))
     (set i (cond
+             (or (= "--help" arg) (= "-h" arg))
+             (usage (config :info) [orules prules])
+
              (= "--" arg)
-             (inc i)
+             (usage-error "illegal use of '--'")
 
              (string/has-prefix? "--" arg)
-             (consume-option orules oargs args i)
+             (consume-option orules oargs all-args i)
 
              (= "-" arg)
              (usage-error "illegal use of '-'")
 
              (string/has-prefix? "-" arg)
-             (consume-option orules oargs args i (string/slice arg 1))
+             (consume-option orules oargs all-args i (string/slice arg 1))
 
-             (consume-param prules pargs args i)))
+             (consume-param prules pargs all-args i)))
     (when (nil? i)
       (break)))
 
@@ -454,46 +568,103 @@
       (when (nil? (oargs name))
         (when (rule :required)
           (usage-error "--" name " is required"))
-        (put oargs name (rule :default)))))
+        (put oargs name (rule :default))))
 
-  (unless errored?
-    {:opts oargs :params pargs}))
+    @{:opts oargs :params pargs}))
 
 
-(defn parse-with-subcommands
+(defn parse-args-with-subcommands
   ```
   Parse the `(dyn :args)` value for a program with subcommands
 
-  The function requires an `info` struct with information for the top-level
-  usage messages (this can be empty). In addition, a series of key-value pairs
-  should be provided with the key being the name of the subcommand and the
-  value being a tuple of rules and info that match the values expected by
-  `parse`.
+  This function takes a `config` struct and a `subcommands` struct.
 
-  The return value is the same struct returned by `parse` but with one
-  additional key, `:sub`. The value is a string with the matching subcommand.
+  ### Config
+
+  The `config` struct should contain the following keys:
+
+  * `:rules` - Tuple of rules to use to parse the arguments.
+  * `:info` - Struct of messages to use in help output.
+
+  The rules tuple is similar to that in `parse-args` except that parameter
+  rules are ignored.
+
+  The info struct is similar to that in `parse-args` except that the `:params`
+  key is ignored. A `:subcmds` key can be provided and is displayed immediately
+  prior to the listing of subcommands.
+
+  ### Subcommands
+
+  The `subcommands` struct contains keys that are strings and values that are
+  struct. Each key is the name of the subcommand. The struct includes the same
+  keys as the `config` struct used in `parse-args`. A `:help` key can be
+  provided and is used in the listing of subcommands.
+
+  ### Return Value
+
+  Once parsed, the return value is a table with `:opts`, `:params` and `:sub`
+  keys.  The value associated with the `:opts` and `:params` keys are the same
+  as that in `parse-args`. The value associated with the `:sub` key is the name
+  of the subcommand provided.
   ```
-  [info &keys configs]
-  (def num-args (length (dyn :args)))
+  [config subcommands]
+  (set cols (get-cols))
+  (set command (conform-cmds (dyn :args)))
+  (set errored? false)
+  (def oargs @{})
+  (def pargs @{})
+  (var subcommand nil)
 
-  (def pcommand (in (dyn :args) 0))
+  (def [orules _] (conform-rules (get config :rules [])))
 
-  (set command pcommand)
-  (put config :info info)
-  (put config :srules configs)
+  (def all-args (conform-args (dyn :args)))
+  (def num-args (length all-args))
+  (var i 1)
 
-  (def scommand (get (dyn :args) 1))
-  (cond
-    (or (one? num-args)
-        (= "--help" scommand)
-        (= "-h" scommand))
-    (usage-subcommands)
+  (while (< i num-args)
+    (def arg (get all-args i))
+    (set i (cond
+             (or (nil? arg) (= "--help" arg) (= "-h" arg))
+             (usage-with-subcommands (config :info) [orules subcommands])
 
-    (string/has-prefix? "-" scommand)
-    (usage-error "unrecognized option '" scommand "'")
+             (string/has-prefix? "--" arg)
+             (consume-option orules oargs all-args i)
 
-    (nil? (configs scommand))
-    (usage-error "unrecognized command '" scommand "'")
+             (= "-" arg)
+             (usage-error "illegal use of '-'")
 
-    (let [[args info] (configs scommand)]
-      (put (parse args info true) :sub scommand))))
+             (string/has-prefix? "-" arg)
+             (consume-option orules oargs all-args i (string/slice arg 1))
+
+             (= "help" arg)
+             (do
+               (set subcommand (get all-args (++ i)))
+               (def subconfig (subcommands subcommand))
+               (cond
+                 (nil? subcommand)
+                 (usage-with-subcommands (config :info) [orules subcommands])
+
+                 (nil? subconfig)
+                 (usage-error "unrecognized subcommand '" subcommand "'")
+
+                 (do
+                   (set command (string command " " subcommand))
+                   (usage (subconfig :info) (conform-rules (get subconfig :rules []))))))
+
+             (do
+               (def subconfig (subcommands arg))
+               (if (nil? subconfig)
+                 (usage-error "unrecognized subcommand '" arg "'")
+                 (with-dyns [:args (-> (array/slice all-args (dec i)) (put 0 command))]
+                   (def subargs (parse-args subconfig true))
+                   (unless (nil? subargs)
+                     (set subcommand arg)
+                     (merge-into oargs (subargs :opts))
+                     (merge-into pargs (subargs :params))))))))
+    (when (nil? i)
+      (break)))
+
+  (unless errored?
+    (if (nil? subcommand)
+      (usage-with-subcommands (config :info) [orules subcommands])
+      @{:opts oargs :params pargs :sub subcommand})))
