@@ -375,7 +375,8 @@
           (put pargs name (array/push (or (pargs name) @[]) val))
           (put pargs name val))
         (inc i))
-      (usage-error "'" arg "' is invalid value for " (string/ascii-upper name)))
+      (usage-error "'" (get args i) "' is an invalid value for "
+                   (string/ascii-upper name)))
     (usage-error "too many parameters passed")))
 
 
