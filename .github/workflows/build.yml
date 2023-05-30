@@ -16,4 +16,4 @@ jobs:
       uses: pyrmont/action-janet-test@master
       with:
         cmd-deps: "jpm -l dev-deps"
-        cmd-deps: "jpm -l test"
+        cmd-test: "jpm -l test"
