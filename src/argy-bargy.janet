@@ -20,7 +20,11 @@
   []
   (if (nil? cols)
     (do
-      (def p (os/spawn ["tput" "cols"] :p {:out :pipe :err :pipe}))
+      (def cmd
+        (if (= :windows (os/which))
+          ["powershell" "-command" "&{(get-host).ui.rawui.WindowSize.Width;}"]
+          ["tput" "cols"]))
+      (def p (os/spawn cmd :p {:out :pipe :err :pipe}))
       (def err (:wait p))
       (def tcols (when (zero? err) (-> (p :out) (:read :all) string/trim scan-number)))
       (min (or tcols max-width) max-width))
