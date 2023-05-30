@@ -7,6 +7,7 @@
 
 (var- cols nil)
 (var- command "")
+(var- helped? false)
 (var- errored? false)
 
 
@@ -32,6 +33,16 @@
   ```
   [opts]
   (filter (fn [[name _]] (not (one? (length name)))) (pairs opts)))
+
+
+(defn- reset
+  ```
+  Reset the errored? and helped? variables
+  ```
+  []
+  (set helped? false)
+  (set errored? false)
+  nil)
 
 
 (defn- split-words
@@ -113,12 +124,12 @@
 
 # Usage messages
 
-(defn- usage-error
+(defn usage-error
   ```
   Print the usage error message to stderr
   ```
   [& msg]
-  (unless errored?
+  (unless (or errored? helped?)
     (set errored? true)
     (eprint command ": " ;msg)
     (eprint "Try '" command " --help' for more information.")))
@@ -133,12 +144,7 @@
   (var ppad 0)
 
   (each [name rule] prules
-    (def usage-prefix
-      (stitch [""
-               (string/ascii-upper name)
-               (when (or (= :single (rule :kind)) (= :multi (rule :kind)))
-                 (or (rule :value-name) "<value>"))
-               (rule :default)]))
+    (def usage-prefix (string " " (string/ascii-upper name)))
     (def usage-help
       (stitch [(rule :help)
                (when (rule :default)
@@ -171,9 +177,7 @@
                  "   ")
                (string "--" name)
                (when (or (= :single (rule :kind)) (= :multi (rule :kind)))
-                 (or (rule :value-name) (string/ascii-upper name)))
-               # (when (rule :default)
-               #   (string "<" (rule :default) ">"))
+                 (or (rule :name) (string/ascii-upper name)))
                ]))
     (def usage-help
       (stitch [(rule :help)
@@ -227,41 +231,42 @@
   Print the usage message
   ```
   [&opt info [orules prules]]
-  (set errored? true)
-
   (default info {})
   (default orules {})
   (default prules [])
 
-  (if (info :examples)
-    (each example (info :examples)
-      (print example))
-    (do
-      (prin "usage: " command)
-      (unless (zero? (length orules))
-        (prin " [OPTION]..."))
-      (each [name rule] prules
-        (prin " ")
-        (cond
-          (and (rule :rest) (rule :required))
-          (prin (string/ascii-upper name) "...")
+  (unless (or errored? helped?)
+    (set helped? true)
 
-          (rule :rest)
-          (prin "[" (string/ascii-upper name) "...]")
+    (if (info :examples)
+      (each example (info :examples)
+        (print example))
+      (do
+        (prin "usage: " command)
+        (unless (zero? (length orules))
+          (prin " [OPTION]..."))
+        (each [name rule] prules
+          (prin " ")
+          (cond
+            (and (rule :rest) (rule :required))
+            (prin (string/ascii-upper name) "...")
 
-          (prin (string/ascii-upper name))))
-      (print)))
+            (rule :rest)
+            (prin "[" (string/ascii-upper name) "...]")
 
-  (when (info :about)
-    (print)
-    (print (indent-str (info :about) 0)))
+            (prin (string/ascii-upper name))))
+        (print)))
 
-  (usage-parameters info prules)
-  (usage-options info orules)
+    (when (info :about)
+      (print)
+      (print (indent-str (info :about) 0)))
 
-  (when (info :rider)
-    (print)
-    (print (indent-str (info :rider) 0))))
+    (usage-parameters info prules)
+    (usage-options info orules)
+
+    (when (info :rider)
+      (print)
+      (print (indent-str (info :rider) 0)))))
 
 
 (defn- usage-with-subcommands
@@ -269,23 +274,24 @@
   Print the usage message with subcommands
   ```
   [info [orules subcommands]]
-  (set errored? true)
+  (unless (or errored? helped?)
+    (set helped? true)
 
-  (if (info :examples)
-    (each example (info :examples)
-      (print example))
-    (print "usage: " command " <subcommand> [args...]"))
+    (if (info :examples)
+      (each example (info :examples)
+        (print example))
+      (print "usage: " command " <subcommand> [args...]"))
 
-  (when (info :about)
-    (print)
-    (print (indent-str (info :about) 0)))
+    (when (info :about)
+      (print)
+      (print (indent-str (info :about) 0)))
 
-  (usage-options info orules)
-  (usage-subcommands info subcommands)
+    (usage-options info orules)
+    (usage-subcommands info subcommands)
 
-  (when (info :rider)
-    (print)
-    (print (indent-str (info :rider) 0))))
+    (when (info :rider)
+      (print)
+      (print (indent-str (info :rider) 0)))))
 
 
 # Processing functions
@@ -427,7 +433,7 @@
     (unless (or (string? k) (keyword? k))
       (errorf "names of rules must be strings or keywords: %p" k))
     (unless (or (struct? v) (table? v))
-      (errorf "each rule must be struct or struct or table: %p" v))
+      (errorf "each rule must be struct or table: %p" v))
     (unless (or (keyword? k) ({:flag true :count true :single true :multi true} (v :kind)))
       (errorf "each option rule must be of kind :flag, :count, :single or :multi: %p" v))
     (when (and (keyword? k) rest-capture?)
@@ -444,7 +450,7 @@
 
       (keyword? k)
       (do
-        (array/push prules [k (if (v :rest) v (merge v {:required true}))])
+        (array/push prules [k v])
         (set rest-capture? (v :rest)))))
   [orules prules])
 
@@ -526,7 +532,6 @@
   [config &opt has-subcommand?]
   (set cols (get-cols))
   (set command (conform-cmds (dyn :args) has-subcommand?))
-  (set errored? false)
   (def oargs @{})
   (def pargs @{})
 
@@ -558,19 +563,20 @@
     (when (nil? i)
       (break)))
 
-  (unless errored?
-    (each [name rule] prules
-      (when (nil? (pargs name))
-        (if (rule :required)
-          (usage-error (string/ascii-upper name) " is required")
-          (put pargs name (rule :default)))))
+  (each [name rule] prules
+    (when (nil? (pargs name))
+      (if (rule :required)
+        (usage-error (string/ascii-upper name) " is required")
+        (put pargs name (rule :default)))))
 
-    (each [name rule] (long-opts orules)
-      (when (nil? (oargs name))
-        (when (rule :required)
-          (usage-error "--" name " is required"))
-        (put oargs name (rule :default))))
+  (each [name rule] (long-opts orules)
+    (when (nil? (oargs name))
+      (when (rule :required)
+        (usage-error "--" name " is required"))
+      (put oargs name (rule :default))))
 
+  (if (or errored? helped?)
+    (reset)
     @{:opts oargs :params pargs}))
 
 
@@ -608,10 +614,10 @@
   as that in `parse-args`. The value associated with the `:sub` key is the name
   of the subcommand provided.
   ```
-  [config subcommands]
+  [config subcommands &opt stop-subcommand?]
+  (default stop-subcommand? false)
   (set cols (get-cols))
   (set command (conform-cmds (dyn :args)))
-  (set errored? false)
   (def oargs @{})
   (def pargs @{})
   (var subcommand nil)
@@ -626,7 +632,7 @@
     (def arg (get all-args i))
     (set i (cond
              (or (nil? arg) (= "--help" arg) (= "-h" arg))
-             (usage-with-subcommands (config :info) [orules subcommands])
+             nil
 
              (string/has-prefix? "--" arg)
              (consume-option orules oargs all-args i)
@@ -637,13 +643,16 @@
              (string/has-prefix? "-" arg)
              (consume-option orules oargs all-args i (string/slice arg 1))
 
+             stop-subcommand?
+             (and (set subcommand arg) nil)
+
              (= "help" arg)
              (do
                (set subcommand (get all-args (++ i)))
                (def subconfig (subcommands subcommand))
                (cond
                  (nil? subcommand)
-                 (usage-with-subcommands (config :info) [orules subcommands])
+                 nil
 
                  (nil? subconfig)
                  (usage-error "unrecognized subcommand '" subcommand "'")
@@ -665,7 +674,9 @@
     (when (nil? i)
       (break)))
 
-  (unless errored?
-    (if (nil? subcommand)
-      (usage-with-subcommands (config :info) [orules subcommands])
-      @{:opts oargs :params pargs :sub subcommand})))
+  (when (nil? subcommand)
+    (usage-with-subcommands (config :info) [orules subcommands]))
+
+  (if (or errored? helped?)
+   (reset)
+   @{:opts oargs :params pargs :sub subcommand}))
