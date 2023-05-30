@@ -15,6 +15,5 @@ jobs:
     - name: "Test project"
       uses: pyrmont/action-janet-test@master
       with:
-        cmd-pre-deps: "jpm install https://github.com/pyrmont/jeep"
-        cmd-deps: "jeep dev-deps"
-        cmd-test: "jeep test"
+        cmd-deps: "jpm -l dev-deps"
+        cmd-deps: "jpm -l test"
