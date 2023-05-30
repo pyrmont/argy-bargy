@@ -368,14 +368,15 @@
   (def pos (length pargs))
   (if-let [[name rule] (or (get prules pos)
                            (rest-capture prules))]
-    (if-let [arg (get args i)
-             val (convert arg (rule :value))]
-      (do
-        (if (rule :rest)
-          (put pargs name (array/push (or (pargs name) @[]) val))
-          (put pargs name val))
-        (inc i))
-      (usage-error "'" arg "' is invalid value for " (string/ascii-upper name)))
+    (if-let [arg (get args i)]
+      (if-let [val (convert arg (rule :value))]
+        (do
+          (if (rule :rest)
+            (put pargs name (array/push (or (pargs name) @[]) val))
+            (put pargs name val))
+          (inc i))
+        (usage-error "'" arg "' is invalid value for " (string/ascii-upper name)))
+      (usage-error "no value for " (string/ascii-upper name)))
     (usage-error "too many parameters passed")))
 
 
