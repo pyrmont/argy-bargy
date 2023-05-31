@@ -619,8 +619,7 @@
   as that in `parse-args`. The value associated with the `:sub` key is the name
   of the subcommand provided.
   ```
-  [config subcommands &opt stop-subcommand?]
-  (default stop-subcommand? false)
+  [config subcommands]
   (set cols (get-cols))
   (set command (conform-cmds (dyn :args)))
   (set helped? false)
@@ -649,9 +648,6 @@
 
              (string/has-prefix? "-" arg)
              (consume-option orules oargs all-args i (string/slice arg 1))
-
-             stop-subcommand?
-             (and (set subcommand arg) nil)
 
              (= "help" arg)
              (do
