@@ -39,16 +39,6 @@
   (filter (fn [[name _]] (not (one? (length name)))) (pairs opts)))
 
 
-(defn- reset
-  ```
-  Reset the errored? and helped? variables
-  ```
-  []
-  (set helped? false)
-  (set errored? false)
-  nil)
-
-
 (defn- split-words
   ```
   Split a string into words
