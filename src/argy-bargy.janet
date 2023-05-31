@@ -31,6 +31,14 @@
     cols))
 
 
+(defn- get-long-name
+  ```
+  Get the long option name that matches the short option name
+  ```
+  [opts short-name]
+  (get-in opts [short-name :long]))
+
+
 (defn- long-opts
   ```
   Filter short options from option rules
@@ -324,17 +332,18 @@
   [orules oargs args i &opt is-short?]
   (def arg (in args i))
   (def name (string/slice arg (if is-short? 1 2)))
+  (def long-name (if is-short? (get-long-name orules name) name))
   (if-let [rule (orules name)
            kind (rule :kind)]
     (case kind
       :flag
       (do
-        (put oargs name true)
+        (put oargs long-name true)
         (inc i))
 
       :count
       (do
-        (put oargs name (-> (oargs name) (or 0) inc))
+        (put oargs long-name (-> (oargs long-name) (or 0) inc))
         (inc i))
 
       (if (or (= kind :single)
@@ -343,8 +352,8 @@
           (if-let [val (convert input (rule :value))]
             (do
               (case kind
-                :single (put oargs name val)
-                :multi  (put oargs name (array/push (or (oargs name) @[]) val)))
+                :single (put oargs long-name val)
+                :multi  (put oargs long-name (array/push (or (oargs long-name) @[]) val)))
               (+ 2 i))
             (usage-error "'" input "' is invalid value for " arg))
           (usage-error "no value after option of type " kind))))
@@ -436,8 +445,9 @@
           (errorf "long option name must be provided: %p" name))
         (unless (> (length name) 2)
           (errorf "option names must be at least two characters: %p" name))
-        (put orules name v)
-        (put orules (v :short) v))
+        (def opt (merge v {:long name}))
+        (put orules name opt)
+        (put orules (opt :short) opt))
 
       (keyword? k)
       (do
