@@ -536,6 +536,8 @@
   [config &opt has-subcommand?]
   (set cols (get-cols))
   (set command (conform-cmds (dyn :args) has-subcommand?))
+  (set helped? false)
+  (set errored? false)
   (def oargs @{})
   (def pargs @{})
 
@@ -579,8 +581,7 @@
         (usage-error "--" name " is required"))
       (put oargs name (rule :default))))
 
-  (if (or errored? helped?)
-    (reset)
+  (unless (or errored? helped?)
     @{:opts oargs :params pargs}))
 
 
@@ -622,6 +623,8 @@
   (default stop-subcommand? false)
   (set cols (get-cols))
   (set command (conform-cmds (dyn :args)))
+  (set helped? false)
+  (set errored? false)
   (def oargs @{})
   (def pargs @{})
   (var subcommand nil)
@@ -681,6 +684,5 @@
   (when (nil? subcommand)
     (usage-with-subcommands (config :info) [orules subcommands]))
 
-  (if (or errored? helped?)
-   (reset)
-   @{:opts oargs :params pargs :sub subcommand}))
+  (unless (or errored? helped?)
+    @{:opts oargs :params pargs :sub subcommand}))
