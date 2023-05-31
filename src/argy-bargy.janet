@@ -560,7 +560,7 @@
              (usage-error "illegal use of '-'")
 
              (string/has-prefix? "-" arg)
-             (consume-option orules oargs all-args i (string/slice arg 1))
+             (consume-option orules oargs all-args i true)
 
              (consume-param prules pargs all-args i)))
     (when (nil? i)
@@ -640,13 +640,13 @@
              nil
 
              (string/has-prefix? "--" arg)
-             (consume-option orules oargs all-args i)
+             (consume-option orules gargs all-args i)
 
              (= "-" arg)
              (usage-error "illegal use of '-'")
 
              (string/has-prefix? "-" arg)
-             (consume-option orules gargs all-args i (string/slice arg 1))
+             (consume-option orules gargs all-args i true)
 
              (= "help" arg)
              (do
