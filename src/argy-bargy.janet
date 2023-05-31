@@ -6,7 +6,7 @@
 (def- pad-right 6)
 
 (var- cols nil)
-(var- command "")
+(var- command nil)
 (var- helped? false)
 (var- errored? false)
 
@@ -407,15 +407,12 @@
   res)
 
 
-(defn- conform-cmds
+(defn- conform-cmd
   ```
-  Conform commands
+  Conform command
   ```
-  [args &opt has-subcommand?]
-  (def pcmd (->> (get args 0) (string/split dir-sep) last))
-  (if has-subcommand?
-    (string pcmd " " (get args 1))
-    pcmd))
+  [args]
+  (->> (get args 0) (string/split dir-sep) last))
 
 
 (defn- conform-rules
@@ -529,13 +526,13 @@
 
   ### Return Value
 
-  Once parsed, the return value is a table with `:opts` and `:params` keys.
-  The value associated with each key is a table containing the values parsed
-  for each matching rule.
+  Once parsed, the return value is a table with `:cmd`, `:opts` and `:params`
+  keys. The value associated with each key is a table containing the values
+  parsed for each matching rule.
   ```
-  [config &opt has-subcommand?]
+  [config]
   (set cols (get-cols))
-  (set command (conform-cmds (dyn :args) has-subcommand?))
+  (set command (conform-cmd (dyn :args)))
   (set helped? false)
   (set errored? false)
   (def oargs @{})
@@ -545,7 +542,7 @@
 
   (def all-args (conform-args (dyn :args)))
   (def num-args (length all-args))
-  (var i (if has-subcommand? 2 1))
+  (var i 1)
 
   (while (< i num-args)
     (def arg (get all-args i))
@@ -582,7 +579,7 @@
       (put oargs name (rule :default))))
 
   (unless (or errored? helped?)
-    @{:opts oargs :params pargs}))
+    @{:cmd command :opts oargs :params pargs}))
 
 
 (defn parse-args-with-subcommands
@@ -614,16 +611,18 @@
 
   ### Return Value
 
-  Once parsed, the return value is a table with `:opts`, `:params` and `:sub`
-  keys.  The value associated with the `:opts` and `:params` keys are the same
-  as that in `parse-args`. The value associated with the `:sub` key is the name
-  of the subcommand provided.
+  Once parsed, the return value is a table with `:cmd`, `:globals`, `:sub`,
+  `:opts` and `:params` keys.  The value associated with the `:cmd`, `:opts`
+  and `:params` keys are the same as that in `parse-args`. The value associated
+  with the `:globals` and `:sub` keys are the globals options and the name of
+  the subcommand respectively.
   ```
   [config subcommands]
   (set cols (get-cols))
-  (set command (conform-cmds (dyn :args)))
+  (set command (conform-cmd (dyn :args)))
   (set helped? false)
   (set errored? false)
+  (def gargs @{})
   (def oargs @{})
   (def pargs @{})
   (var subcommand nil)
@@ -647,7 +646,7 @@
              (usage-error "illegal use of '-'")
 
              (string/has-prefix? "-" arg)
-             (consume-option orules oargs all-args i (string/slice arg 1))
+             (consume-option orules gargs all-args i (string/slice arg 1))
 
              (= "help" arg)
              (do
@@ -668,8 +667,11 @@
                (def subconfig (subcommands arg))
                (if (nil? subconfig)
                  (usage-error "unrecognized subcommand '" arg "'")
-                 (with-dyns [:args (-> (array/slice all-args (dec i)) (put 0 command))]
-                   (def subargs (parse-args subconfig true))
+                 (with-dyns [:args (-> (array/slice all-args i)
+                                       (put 0 (string command " " arg)))]
+                   (def old-command command)
+                   (def subargs (parse-args subconfig))
+                   (set command old-command)
                    (unless (nil? subargs)
                      (set subcommand arg)
                      (merge-into oargs (subargs :opts))
@@ -681,4 +683,4 @@
     (usage-with-subcommands (config :info) [orules subcommands]))
 
   (unless (or errored? helped?)
-    @{:opts oargs :params pargs :sub subcommand}))
+    @{:cmd command :globals gargs :sub subcommand :opts oargs :params pargs}))
