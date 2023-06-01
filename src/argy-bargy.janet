@@ -528,7 +528,8 @@
 
   Once parsed, the return value is a table with `:cmd`, `:opts` and `:params`
   keys. The value associated with each key is a table containing the values
-  parsed for each matching rule.
+  parsed for each matching rule. The table also includes `:error?` and `:help?`
+  keys that can be used to determine if the parsing completed successfully.
   ```
   [config]
   (set cols (get-cols))
@@ -578,8 +579,7 @@
         (usage-error "--" name " is required"))
       (put oargs name (rule :default))))
 
-  (unless (or errored? helped?)
-    @{:cmd command :opts oargs :params pargs}))
+  @{:cmd command :opts oargs :params pargs :error? errored? :help? helped?})
 
 
 (defn parse-args-with-subcommands
@@ -615,7 +615,8 @@
   `:opts` and `:params` keys.  The value associated with the `:cmd`, `:opts`
   and `:params` keys are the same as that in `parse-args`. The value associated
   with the `:globals` and `:sub` keys are the globals options and the name of
-  the subcommand respectively.
+  the subcommand respectively. The table also includes `:error?` and `:help?`
+  keys that can be used to determine if the parsing completed successfully.
   ```
   [config subcommands]
   (set cols (get-cols))
@@ -664,16 +665,16 @@
                    (usage (subconfig :info) (conform-rules (get subconfig :rules []))))))
 
              (do
-               (def subconfig (subcommands arg))
+               (set subcommand arg)
+               (def subconfig (subcommands subcommand))
                (if (nil? subconfig)
-                 (usage-error "unrecognized subcommand '" arg "'")
+                 (usage-error "unrecognized subcommand '" subcommand "'")
                  (with-dyns [:args (-> (array/slice all-args i)
-                                       (put 0 (string command " " arg)))]
+                                       (put 0 (string command " " subcommand)))]
                    (def old-command command)
                    (def subargs (parse-args subconfig))
                    (set command old-command)
                    (unless (nil? subargs)
-                     (set subcommand arg)
                      (merge-into oargs (subargs :opts))
                      (merge-into pargs (subargs :params))))))))
     (when (nil? i)
@@ -682,5 +683,4 @@
   (when (nil? subcommand)
     (usage-with-subcommands (config :info) [orules subcommands]))
 
-  (unless (or errored? helped?)
-    @{:cmd command :globals gargs :sub subcommand :opts oargs :params pargs}))
+  @{:cmd command :globals gargs :sub subcommand :opts oargs :params pargs :error? errored? :help? helped?})

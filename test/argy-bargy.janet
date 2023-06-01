@@ -18,7 +18,9 @@
     (capture
       (with-dyns [:args @["program" "--foo"]]
         (argy-bargy/parse-args config))))
-  (def expect {:err "" :out "" :res {:cmd "program" :opts @{"foo" true} :params @{}}})
+  (def expect {:err ""
+               :out ""
+               :res {:cmd "program" :error? false :help? false :opts @{"foo" true} :params @{}}})
   (is (== expect actual)))
 
 
@@ -28,7 +30,9 @@
     (capture
       (with-dyns [:args @["program" "--foo" "--foo"]]
         (argy-bargy/parse-args config))))
-  (def expect {:err "" :out "" :res {:cmd "program" :opts @{"foo" 2} :params @{}}})
+  (def expect {:err ""
+               :out ""
+               :res {:cmd "program" :error? false :help? false :opts @{"foo" 2} :params @{}}})
   (is (== expect actual)))
 
 
@@ -38,7 +42,9 @@
     (capture
       (with-dyns [:args @["program" "--foo" "bar"]]
         (argy-bargy/parse-args config))))
-  (def expect {:err "" :out "" :res {:cmd "program" :opts @{"foo" "bar"} :params @{}}})
+  (def expect {:err ""
+               :out ""
+               :res {:cmd "program" :error? false :help? false :opts @{"foo" "bar"} :params @{}}})
   (is (== expect actual)))
 
 
@@ -48,7 +54,9 @@
     (capture
       (with-dyns [:args @["program" "--foo" "bar" "--foo" "qux"]]
         (argy-bargy/parse-args config))))
-  (def expect {:err "" :out "" :res {:cmd "program" :opts @{"foo" ["bar" "qux"]} :params @{}}})
+  (def expect {:err ""
+               :out ""
+               :res {:cmd "program" :error? false :help? false :opts @{"foo" ["bar" "qux"]} :params @{}}})
   (is (== expect actual)))
 
 
@@ -61,7 +69,9 @@
     (capture
       (with-dyns [:args @["program" "--foo"]]
         (argy-bargy/parse-args config))))
-  (def expect {:err (string msg "\n") :out "" :res nil})
+  (def expect {:err (string msg "\n")
+               :out ""
+               :res {:cmd "program" :error? true :help? false :opts @{} :params @{}}})
   (is (== expect actual)))
 
 
@@ -76,7 +86,9 @@
     (capture
       (with-dyns [:args @["program" "--help"]]
         (argy-bargy/parse-args config))))
-  (def expect {:err "" :out (string msg "\n") :res nil})
+  (def expect {:err ""
+               :out (string msg "\n")
+               :res {:cmd "program" :error? false :help? true :opts @{} :params @{}}})
   (is (== expect actual)))
 
 
@@ -87,7 +99,9 @@
     (capture
       (with-dyns [:args @["program" "example" "--foo"]]
         (argy-bargy/parse-args-with-subcommands config subcommands))))
-  (def expect {:err "" :out "" :res @{:cmd "program" :globals @{} :sub "example" :opts @{"foo" true} :params @{}}})
+  (def expect {:err ""
+               :out ""
+               :res @{:cmd "program" :error? false :help? false :globals @{} :sub "example" :opts @{"foo" true} :params @{}}})
   (is (== expect actual)))
 
 
