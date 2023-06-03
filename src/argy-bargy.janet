@@ -31,13 +31,17 @@
     cols))
 
 
-(defn- get-long-name
+(defn- get-rule
   ```
-  Get the long option name that matches the short option name
+  Get a rule matching a name
   ```
-  [opts short-name]
-  (get-in opts [short-name :long]))
-
+  [rules name]
+  (var res nil)
+  (each [[k v]] rules
+    (when (or (= k name) (= (v :short) name))
+      (set res v)
+      (break)))
+  res)
 
 (defn- long-opts
   ```
@@ -171,7 +175,7 @@
   (def ofrags @{:req @[] :opt @[]})
   (def opad @{:req 0 :opt 0})
 
-  (each [name rule] (sort (long-opts orules))
+  (each [name rule] orules
     (def usage-prefix
       (stitch [""
                (if (rule :short)
@@ -179,7 +183,7 @@
                  "   ")
                (string "--" name)
                (when (or (= :single (rule :kind)) (= :multi (rule :kind)))
-                 (or (rule :name) (string/ascii-upper name)))
+                 (string "<" (or (rule :proxy) name) ">"))
                ]))
     (def usage-help
       (stitch [(rule :help)
@@ -211,7 +215,7 @@
   (def sfrags @[])
   (var spad 0)
 
-  (each [subcommand {:help help}] (sort (pairs subcommands))
+  (each [subcommand {:help help}] (pairs subcommands)
     (def usage-prefix (string " " subcommand))
     (def usage-help (or help ""))
     (array/push sfrags [usage-prefix usage-help])
@@ -332,8 +336,8 @@
   [orules oargs args i &opt is-short?]
   (def arg (in args i))
   (def name (string/slice arg (if is-short? 1 2)))
-  (def long-name (if is-short? (get-long-name orules name) name))
-  (if-let [rule (orules name)
+  (if-let [rule (get-rule orules name)
+           long-name (rule :name)
            kind (rule :kind)]
     (case kind
       :flag
@@ -419,40 +423,43 @@
   Conform rules
   ```
   [rules]
-  (unless (even? (length rules))
-    (errorf "number of elements in rules must be even: %p" rules))
-  (def orules @{})
+  (def orules @[])
   (def prules @[])
+  (var help? false)
   (var rest-capture? false)
-
-  (put orules "help" {:kind  :help
-                      :short "h"
-                      :help  "Show this help message."})
 
   (each [k v] (partition 2 rules)
     (unless (or (string? k) (keyword? k))
       (errorf "names of rules must be strings or keywords: %p" k))
-    (unless (or (struct? v) (table? v))
+    (unless (or (nil? v) (struct? v) (table? v))
       (errorf "each rule must be struct or table: %p" v))
-    (unless (or (keyword? k) ({:flag true :count true :single true :multi true} (v :kind)))
+    (when (and (nil? v) (not= "===" k))
+      (errorf "number of elements in rules must be even: %p" rules))
+    (when (and (keyword? k) ({:flag true :count true :single true :multi true} (v :kind)))
       (errorf "each option rule must be of kind :flag, :count, :single or :multi: %p" v))
     (when (and (keyword? k) rest-capture?)
       (errorf "parameter rules cannot occur after rule that captures :rest: %p" v))
     (cond
+      (= "===" k)
+      (array/push orules [k nil])
+
       (string? k)
       (let [name (if (string/has-prefix? "--" k) (string/slice k 2) k)]
-        (when (string/has-prefix? "-" name)
-          (errorf "long option name must be provided: %p" name))
-        (unless (> (length name) 2)
-          (errorf "option names must be at least two characters: %p" name))
-        (def opt (merge v {:long name}))
-        (put orules name opt)
-        (put orules (opt :short) opt))
+        (when (nil? (peg/find '(* :w (some (+ :w (set "-_"))) -1) name))
+          (errorf "option name must be at least two alphanumeric characters: %p" name))
+        (array/push orules [name (merge v {:name name})])
+        (set help? (= "help" name)))
 
       (keyword? k)
       (do
         (array/push prules [k v])
         (set rest-capture? (v :rest)))))
+
+  (unless help?
+    (array/push orules ["help" {:name  "help"
+                                :kind  :help
+                                :short "h"
+                                :help  "Show this help message."}]))
   [orules prules])
 
 
@@ -573,7 +580,7 @@
         (usage-error (string/ascii-upper name) " is required")
         (put pargs name (rule :default)))))
 
-  (each [name rule] (long-opts orules)
+  (each [name rule] orules
     (when (nil? (oargs name))
       (when (rule :required)
         (usage-error "--" name " is required"))
