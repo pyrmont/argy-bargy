@@ -238,9 +238,9 @@
   (unless (or errored? helped?)
     (set helped? true)
 
-    (if (info :examples)
-      (each example (info :examples)
-        (print example))
+    (if (info :usages)
+      (each sample (info :usages)
+        (print sample))
       (do
         (prin "usage: " command)
         (unless (zero? (length orules))
@@ -277,9 +277,9 @@
   (unless (or errored? helped?)
     (set helped? true)
 
-    (if (info :examples)
-      (each example (info :examples)
-        (print example))
+    (if (info :usages)
+      (each sample (info :usages)
+        (print sample))
       (print "usage: " command " <subcommand> [args...]"))
 
     (when (info :about)
@@ -524,7 +524,9 @@
   can have the following keys:
 
   * `:about` - Message describing the program at a high level.
-  * `:examples` - Collection of examples to be used in usage message.
+  * `:usages` - Collection of usage samples to be used in the usage message.
+    If no samples are provided, one will be generated automatically based on the
+    provided rules.
   * `:opts` - Message printed immediately prior to listing of options.
   * `:params` - Message printed immediately prior to listing of parameters.
   * `:rider` - Message printed at the end of the usage message.
