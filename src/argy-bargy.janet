@@ -4,6 +4,7 @@
 (def- max-width 120)
 (def- pad-inset 4)
 (def- pad-right 6)
+(def- hr "---")
 
 (var- cols nil)
 (var- command nil)
@@ -37,18 +38,11 @@
   ```
   [rules name]
   (var res nil)
-  (each [[k v]] rules
+  (each [k v] rules
     (when (or (= k name) (= (v :short) name))
       (set res v)
       (break)))
   res)
-
-(defn- long-opts
-  ```
-  Filter short options from option rules
-  ```
-  [opts]
-  (filter (fn [[name _]] (not (one? (length name)))) (pairs opts)))
 
 
 (defn- split-words
@@ -145,66 +139,66 @@
   ```
   Print the usage descriptions for the parameters
   ```
-  [info prules]
-  (def pfrags @[])
-  (var ppad 0)
+  [info rules]
+  (def usages @[])
+  (var pad 0)
 
-  (each [name rule] prules
+  (each [name rule] rules
     (def usage-prefix (string " " (string/ascii-upper name)))
     (def usage-help
       (stitch [(rule :help)
                (when (rule :default)
                  (string "(Default: " (rule :default) ")"))]))
-    (array/push pfrags [usage-prefix usage-help])
-    (set ppad (max (+ pad-inset (length usage-prefix)) ppad)))
+    (array/push usages [usage-prefix usage-help])
+    (set pad (max (+ pad-inset (length usage-prefix)) pad)))
 
-  (unless (empty? pfrags)
+  (unless (empty? usages)
     (print)
     (when (info :params)
       (print (info :params)))
-    (each [prefix help] pfrags
-      (def startp (- ppad (length prefix)))
-      (print prefix (indent-str help startp ppad (- cols pad-right))))))
+    (each [prefix help] usages
+      (def startp (- pad (length prefix)))
+      (print prefix (indent-str help startp pad (- cols pad-right))))))
 
 
 (defn- usage-options
   ```
   Print the usage descriptions for the options
   ```
-  [info orules]
-  (def ofrags @{:req @[] :opt @[]})
-  (def opad @{:req 0 :opt 0})
+  [info rules]
+  (def usages @[])
+  (var pad 0)
 
-  (each [name rule] orules
-    (def usage-prefix
-      (stitch [""
-               (if (rule :short)
-                 (string "-" (rule :short) ",")
-                 "   ")
-               (string "--" name)
-               (when (or (= :single (rule :kind)) (= :multi (rule :kind)))
-                 (string "<" (or (rule :proxy) name) ">"))
-               ]))
-    (def usage-help
-      (stitch [(rule :help)
-               (when (rule :default)
-                 (string "(Default: " (rule :default) ")"))]))
-    (def k (if (rule :required) :req :opt))
-    (array/push (ofrags k) [usage-prefix usage-help])
-    (put opad k (max (+ pad-inset (length usage-prefix)) (opad k))))
+  (each [name rule] rules
+    (if (= hr name)
+      (array/push usages [nil nil])
+      (do
+        (def usage-prefix
+          (stitch [(if (rule :short)
+                     (string " -" (rule :short) ",")
+                     "    ")
+                   (string "--" name)
+                   (when (or (= :single (rule :kind)) (= :multi (rule :kind)))
+                     (string "<" (or (rule :proxy) name) ">"))
+                   ]))
+        (def usage-help
+          (stitch [(rule :help)
+                   (when (rule :default)
+                     (string "(Default: " (rule :default) ")"))]))
+        (array/push usages [usage-prefix usage-help])
+        (set pad (max (+ pad-inset (length usage-prefix)) pad)))))
 
-  (unless (and (zero? (ofrags :req))
-               (zero? (ofrags :opt)))
+  (unless (empty? usages)
     (print)
     (when (info :opts)
       (print (info :opts))))
 
-  (each k [:req :opt]
-    (unless (empty? (ofrags k))
-      (print " " (if (= k :req) "Required" "Optional") ":")
-      (each [prefix help] (ofrags k)
-        (def startp (- (opad k) (length prefix)))
-        (print prefix (indent-str help startp (opad k) (- cols pad-right)))))))
+  (each [prefix help] usages
+    (if (nil? help)
+      (print)
+      (do
+        (def startp (- pad (length prefix)))
+        (print prefix (indent-str help startp pad (- cols pad-right)))))))
 
 
 (defn- usage-subcommands
@@ -428,32 +422,36 @@
   (var help? false)
   (var rest-capture? false)
 
-  (each [k v] (partition 2 rules)
-    (unless (or (string? k) (keyword? k))
-      (errorf "names of rules must be strings or keywords: %p" k))
-    (unless (or (nil? v) (struct? v) (table? v))
-      (errorf "each rule must be struct or table: %p" v))
-    (when (and (nil? v) (not= "===" k))
-      (errorf "number of elements in rules must be even: %p" rules))
-    (when (and (keyword? k) ({:flag true :count true :single true :multi true} (v :kind)))
-      (errorf "each option rule must be of kind :flag, :count, :single or :multi: %p" v))
-    (when (and (keyword? k) rest-capture?)
-      (errorf "parameter rules cannot occur after rule that captures :rest: %p" v))
-    (cond
-      (= "===" k)
-      (array/push orules [k nil])
-
-      (string? k)
-      (let [name (if (string/has-prefix? "--" k) (string/slice k 2) k)]
-        (when (nil? (peg/find '(* :w (some (+ :w (set "-_"))) -1) name))
-          (errorf "option name must be at least two alphanumeric characters: %p" name))
-        (array/push orules [name (merge v {:name name})])
-        (set help? (= "help" name)))
-
-      (keyword? k)
+  (var i 0)
+  (while (< i (length rules))
+    (def k (get rules i))
+    (if (string/has-prefix? hr k)
+      (array/push orules [hr nil])
       (do
-        (array/push prules [k v])
-        (set rest-capture? (v :rest)))))
+        (unless (or (string? k) (keyword? k))
+          (errorf "names of rules must be strings or keywords: %p" k))
+        (def v (get rules (++ i)))
+        (when (nil? v)
+          (errorf "number of elements in rules must be even: %p" rules))
+        (unless (or (struct? v) (table? v))
+          (errorf "each rule must be struct or table: %p" v))
+        (unless (or (keyword? k) ({:flag true :count true :single true :multi true} (v :kind)))
+          (errorf "each option rule must be of kind :flag, :count, :single or :multi: %p" v))
+        (when (and (keyword? k) rest-capture?)
+          (errorf "parameter rules cannot occur after rule that captures :rest: %p" v))
+        (cond
+          (string? k)
+          (let [name (if (string/has-prefix? "--" k) (string/slice k 2) k)]
+            (when (nil? (peg/find '(* :w (some (+ :w (set "-_"))) -1) name))
+              (errorf "option name must be at least two alphanumeric characters: %p" name))
+            (array/push orules [name (merge v {:name name})])
+            (set help? (= "help" name)))
+
+          (keyword? k)
+          (do
+            (array/push prules [k v])
+            (set rest-capture? (v :rest))))))
+    (++ i))
 
   (unless help?
     (array/push orules ["help" {:name  "help"
@@ -579,12 +577,6 @@
       (if (rule :required)
         (usage-error (string/ascii-upper name) " is required")
         (put pargs name (rule :default)))))
-
-  (each [name rule] orules
-    (when (nil? (oargs name))
-      (when (rule :required)
-        (usage-error "--" name " is required"))
-      (put oargs name (rule :default))))
 
   @{:cmd command :opts oargs :params pargs :error? errored? :help? helped?})
 

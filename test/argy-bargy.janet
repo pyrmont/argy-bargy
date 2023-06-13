@@ -79,7 +79,6 @@
   (def msg
       `usage: program [OPTION]...
 
-       Optional:
        -h, --help    Show this help message.`)
   (def config {})
   (def actual
@@ -89,6 +88,26 @@
   (def expect {:err ""
                :out (string msg "\n")
                :res {:cmd "program" :error? false :help? true :opts @{} :params @{}}})
+  (is (== expect actual)))
+
+
+(deftest parse-with-usage-help-separators
+  (def msg
+       `usage: program [OPTION]...
+
+            --foo     An option.
+
+        -h, --help    Show this help message.`)
+  (def config {:rules ["--foo" {:kind :flag
+                                :help "An option."}
+                       "---"]})
+  (def actual
+    (capture
+      (with-dyns [:args @["program" "--help"]]
+        (argy-bargy/parse-args config))))
+  (def expect {:err ""
+               :out (string msg "\n")
+               :res @{:cmd "program" :error? false :help? true :opts @{} :params @{}}})
   (is (== expect actual)))
 
 
