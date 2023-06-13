@@ -39,7 +39,7 @@
   [rules name]
   (var res nil)
   (each [k v] rules
-    (when (or (= k name) (= (v :short) name))
+    (when (or (= k name) (= (get v :short) name))
       (set res v)
       (break)))
   res)
@@ -395,9 +395,9 @@
   ```
   [args]
   (def res @[])
-  (def grammar ~{:main      (+ :long-opt :short-opt ':rest)
-                 :rest      (some 1)
-                 :long-opt  (* '(* "--" (any (if-not "=" 1))) (? (* "=" ':rest)))
+  (def grammar ~{:main      (+ :long-opt :short-opt :rest)
+                 :rest      '(some 1)
+                 :long-opt  (* '(* "--" (any (if-not "=" 1))) (? (* "=" :rest)))
                  :short-opt (* '(* "-" 1) (any (% (* (constant "-") '1))))})
   (each arg args
     (array/concat res (peg/match grammar arg)))
