@@ -500,6 +500,10 @@
     provided and Argy-Bargy's internal converter will be used instead. The
     valid keywords are :string and :integer.
 
+  A `--help` option is added automatically unless provided in the rules tuple.
+  Options will be separated by a blank line if the rules tuple includes a
+  `---` separator.
+
   #### Parameters
 
   If the key is a keyword, the rule will be applied to parameter arguments
