@@ -24,13 +24,13 @@
       (def cmd
         (if (= :windows (os/which))
           ["powershell" "-command" "&{(get-host).ui.rawui.WindowSize.Width;}"]
-          ["stty" "size"]))
-      (var result [])
+          ["tput" "cols"]))
       (with [f (file/temp)]
-        (os/execute ["stty" "size"] :p {:out f})
+        (os/execute cmd :p {:out f})
         (file/seek f :set 0)
-        (set result (string/split " " (file/read f :all))))
-      (set cols (min (get result 1) max-width)))
+        (def out (file/read f :all))
+        (def tcols (scan-number (string/trim out)))
+        (min tcols max-width)))
     cols))
 
 
