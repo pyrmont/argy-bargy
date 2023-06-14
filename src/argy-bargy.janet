@@ -124,7 +124,7 @@
 
 # Usage messages
 
-(defn usage-error
+(defn- usage-error
   ```
   Print the usage error message to stderr
   ```
