@@ -2,6 +2,7 @@
 
 (def- dir-sep "/")
 (def- max-width 120)
+# (def- max-width math/int-max)
 (def- pad-inset 4)
 (def- pad-right 6)
 (def- hr "---")
@@ -24,13 +25,16 @@
       (def cmd
         (if (= :windows (os/which))
           ["powershell" "-command" "&{(get-host).ui.rawui.WindowSize.Width;}"]
-          ["stty" "size"]))
-      (var result [])
-      (with [f (file/temp)]
-        (os/execute ["stty" "size"] :p {:out f})
-        (file/seek f :set 0)
-        (set result (string/split " " (file/read f :all))))
-      (set cols (min (get result 1) max-width)))
+          ["tput" "cols"]))
+      (def out @"")
+      (def err @"")
+      (with-dyns [:out out :err err]
+        (os/shell "tput cols"))
+      (prin "output: ")
+      (pp out)
+      # (def tcols (when (zero? err) (-> (p :out) (:read :all) string/trim scan-number)))
+      (def tcols (scan-number out))
+      (min tcols max-width))
     cols))
 
 
@@ -97,7 +101,7 @@
   (default hangp 0)
   (default maxw cols)
   (def res (buffer (string/repeat " " startp)))
-  (var currw hangp)
+  (var currw (- hangp startp))
   (var first? true)
   (each word (split-words str)
     (cond
