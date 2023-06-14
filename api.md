@@ -9,7 +9,7 @@
 **function**  | [source][1]
 
 ```janet
-(parse-args config &opt has-subcommand?)
+(parse-args config)
 ```
 
 Parse the `(dyn :args)` value for a program
@@ -47,6 +47,10 @@ is a struct that can have the following keys:
   provided and Argy-Bargy's internal converter will be used instead. The
   valid keywords are :string and :integer.
 
+A `--help` option is added automatically unless provided in the rules tuple.
+Options will be separated by a blank line if the rules tuple includes a
+`---` separator.
+
 #### Parameters
 
 If the key is a keyword, the rule will be applied to parameter arguments
@@ -71,18 +75,21 @@ The info struct contains messages that are used in the usage help. The struct
 can have the following keys:
 
 * `:about` - Message describing the program at a high level.
-* `:examples` - Collection of examples to be used in usage message.
+* `:usages` - Collection of usage samples to be used in the usage message.
+  If no samples are provided, one will be generated automatically based on the
+  provided rules.
 * `:opts` - Message printed immediately prior to listing of options.
 * `:params` - Message printed immediately prior to listing of parameters.
 * `:rider` - Message printed at the end of the usage message.
 
 ### Return Value
 
-Once parsed, the return value is a table with `:opts` and `:params` keys.
-The value associated with each key is a table containing the values parsed
-for each matching rule.
+Once parsed, the return value is a table with `:cmd`, `:opts` and `:params`
+keys. The value associated with each key is a table containing the values
+parsed for each matching rule. The table also includes `:error?` and `:help?`
+keys that can be used to determine if the parsing completed successfully.
 
-[1]: src/argy-bargy.janet#L453
+[1]: src/argy-bargy.janet#L468
 
 ## parse-args-with-subcommands
 
@@ -119,10 +126,12 @@ provided and is used in the listing of subcommands.
 
 ### Return Value
 
-Once parsed, the return value is a table with `:opts`, `:params` and `:sub`
-keys.  The value associated with the `:opts` and `:params` keys are the same
-as that in `parse-args`. The value associated with the `:sub` key is the name
-of the subcommand provided.
+Once parsed, the return value is a table with `:cmd`, `:globals`, `:sub`,
+`:opts` and `:params` keys.  The value associated with the `:cmd`, `:opts`
+and `:params` keys are the same as that in `parse-args`. The value associated
+with the `:globals` and `:sub` keys are the globals options and the name of
+the subcommand respectively. The table also includes `:error?` and `:help?`
+keys that can be used to determine if the parsing completed successfully.
 
-[2]: src/argy-bargy.janet#L576
+[2]: src/argy-bargy.janet#L592
 
