@@ -12,9 +12,15 @@
   :source ["src/argy-bargy.janet"])
 
 (task "dev-deps" []
-  (if-let [deps ((dyn :project) :dev-dependencies)]
+  (if-let [deps ((dyn :project) :dependencies)]
     (each dep deps
       (bundle-install dep))
     (do
       (print "no dependencies found")
+      (flush)))
+  (if-let [deps ((dyn :project) :dev-dependencies)]
+    (each dep deps
+      (bundle-install dep))
+    (do
+      (print "no dev-dependencies found")
       (flush))))
