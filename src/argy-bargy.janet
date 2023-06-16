@@ -93,11 +93,12 @@
   If a maximum width is provided, wrap and indent lines by the
   hanging padding.
   ```
-  [str startp &opt hangp maxw]
+  [str startw &opt startp hangp maxw]
+  (default startp 0)
   (default hangp 0)
   (default maxw cols)
   (def res (buffer (string/repeat " " startp)))
-  (var currw hangp)
+  (var currw startw)
   (var first? true)
   (each word (split-words str)
     (cond
@@ -160,7 +161,7 @@
       (print (info :params)))
     (each [prefix help] usages
       (def startp (- pad (length prefix)))
-      (print prefix (indent-str help startp pad (- cols pad-right))))))
+      (print prefix (indent-str help (length prefix) startp pad (- cols pad-right))))))
 
 
 (defn- usage-options
@@ -200,7 +201,7 @@
       (print)
       (do
         (def startp (- pad (length prefix)))
-        (print prefix (indent-str help startp pad (- cols pad-right)))))))
+        (print prefix (indent-str help (length prefix) startp pad (- cols pad-right)))))))
 
 
 (defn- usage-subcommands
@@ -223,7 +224,7 @@
       (print (info :subcmds)))
     (each [prefix help] sfrags
       (def startp (- spad (length prefix)))
-      (print prefix (indent-str help startp spad (- cols pad-right))))
+      (print prefix (indent-str help (length prefix) startp spad (- cols pad-right))))
     (print)
     (print "For more information on each subcommand, type '" command " help <subcommand>'.")))
 
@@ -244,20 +245,33 @@
       (each sample (info :usages)
         (print sample))
       (do
-        (prin "usage: " command)
-        (unless (zero? (length orules))
-          (prin " [OPTION]..."))
-        (each [name rule] prules
-          (prin " ")
-          (cond
-            (and (rule :rest) (rule :required))
-            (prin (string/ascii-upper name) "...")
+        (print (indent-str
+                 (string "usage: "
+                         command
+                         ;(map (fn [[name rule]]
+                                 (unless (nil? rule)
+                                   (string " [--" name
+                                           (when (or (= :single (rule :kind))
+                                                     (= :multi (rule :kind)))
+                                             (string " <" (or (rule :proxy) (rule :name)) ">"))
+                                           "]")))
+                               orules)
+                         ;(map (fn [[name rule]]
+                                 (def proxy (string/ascii-upper name))
+                                 (string " "
+                                         (cond
+                                           (and (rule :rest) (rule :required))
+                                           (string proxy  "...")
 
-            (rule :rest)
-            (prin "[" (string/ascii-upper name) "...]")
+                                           (rule :rest)
+                                           (string "[" proxy "...]")
 
-            (prin (string/ascii-upper name))))
-        (print)))
+                                           proxy)))
+                               prules))
+                 0
+                 0
+                 (+ 7 (length command) 1)
+                 (- cols pad-right)))))
 
     (when (info :about)
       (print)

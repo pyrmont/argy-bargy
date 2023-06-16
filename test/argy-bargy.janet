@@ -77,7 +77,7 @@
 
 (deftest parse-with-usage-help
   (def msg
-      `usage: program [OPTION]...
+      `usage: program [--help]
 
        -h, --help    Show this help message.`)
   (def config {})
@@ -93,7 +93,7 @@
 
 (deftest parse-with-usage-help-separators
   (def msg
-       `usage: program [OPTION]...
+       `usage: program [--foo] [--help]
 
             --foo     An option.
 
