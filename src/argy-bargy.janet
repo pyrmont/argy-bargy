@@ -38,10 +38,23 @@
   ```
   Get a rule matching a name
   ```
-  [rules name]
+  [name rules]
   (var res nil)
   (each [k v] rules
     (when (or (= k name) (= (get v :short) name))
+      (set res v)
+      (break)))
+  res)
+
+
+(defn- get-subconfig
+  ```
+  Gets a subconfig matching a name
+  ```
+  [name subconfigs]
+  (var res nil)
+  (each [k v] subconfigs
+    (when (= k name)
       (set res v)
       (break)))
   res)
@@ -208,23 +221,29 @@
   ```
   Print the usage descriptions for the subcommands
   ```
-  [info subcommands]
-  (def sfrags @[])
-  (var spad 0)
+  [info subconfigs]
+  (def usages @[])
+  (var pad 0)
 
-  (each [subcommand {:help help}] (pairs subcommands)
-    (def usage-prefix (string " " subcommand))
-    (def usage-help (or help ""))
-    (array/push sfrags [usage-prefix usage-help])
-    (set spad (max (+ pad-inset (length usage-prefix)) spad)))
+  (each [name config] subconfigs
+    (if (= hr name)
+      (array/push usages [nil nil])
+      (do
+        (def usage-prefix (string " " name))
+        (def usage-help (get config :help ""))
+        (array/push usages [usage-prefix usage-help])
+        (set pad (max (+ pad-inset (length usage-prefix)) pad)))))
 
-  (unless (empty? sfrags)
+  (unless (empty? usages)
     (print)
     (when (info :subcmds)
       (print (info :subcmds)))
-    (each [prefix help] sfrags
-      (def startp (- spad (length prefix)))
-      (print prefix (indent-str help (length prefix) startp spad (- cols pad-right))))
+    (each [prefix help] usages
+      (if (nil? help)
+        (print)
+        (do
+          (def startp (- pad (length prefix)))
+          (print prefix (indent-str help (length prefix) startp pad (- cols pad-right))))))
     (print)
     (print "For more information on each subcommand, type '" command " help <subcommand>'.")))
 
@@ -289,7 +308,7 @@
   ```
   Print the usage message with subcommands
   ```
-  [info [orules subcommands]]
+  [info [orules sunconfigs]]
   (unless (or errored? helped?)
     (set helped? true)
 
@@ -303,7 +322,7 @@
       (print (indent-str (info :about) 0)))
 
     (usage-options info orules)
-    (usage-subcommands info subcommands)
+    (usage-subcommands info sunconfigs)
 
     (when (info :rider)
       (print)
@@ -346,7 +365,7 @@
   [orules oargs args i &opt is-short?]
   (def arg (in args i))
   (def name (string/slice arg (if is-short? 1 2)))
-  (if-let [rule (get-rule orules name)
+  (if-let [rule (get-rule name orules)
            long-name (rule :name)
            kind (rule :kind)]
     (case kind
@@ -420,7 +439,7 @@
   res)
 
 
-(defn- conform-cmd
+(defn- conform-command
   ```
   Conform command
   ```
@@ -433,10 +452,10 @@
   Conform rules
   ```
   [rules]
+  (var rest-capture? false)
   (def orules @[])
   (def prules @[])
   (var help? false)
-  (var rest-capture? false)
 
   (var i 0)
   (while (< i (length rules))
@@ -475,6 +494,30 @@
                                 :short "h"
                                 :help  "Show this help message."}]))
   [orules prules])
+
+
+(defn conform-subconfigs
+  ```
+  Conforms subconfigs
+  ```
+  [subcommands]
+  (def subconfigs @[])
+  (var i 0)
+  (while (< i (length subcommands))
+    (def k (get subcommands i))
+    (if (string/has-prefix? hr k)
+      (array/push subconfigs [hr nil])
+      (do
+        (unless (string? k)
+          (errorf "names of subcommands must be strings: %p" k))
+        (def v (get subcommands (++ i)))
+        (when (nil? v)
+          (errorf "number of elements in subcommands must be even: %p" subcommands))
+        (unless (or (struct? v) (table? v))
+          (errorf "each subcommand must be struct or table: %p" v))
+        (array/push subconfigs [k v])))
+    (++ i))
+  subconfigs)
 
 
 # Parsing functions
@@ -560,7 +603,7 @@
   ```
   [config]
   (set cols (get-cols))
-  (set command (conform-cmd (dyn :args)))
+  (set command (conform-command (dyn :args)))
   (set helped? false)
   (set errored? false)
   (def oargs @{})
@@ -625,10 +668,10 @@
 
   ### Subcommands
 
-  The `subcommands` struct contains keys that are strings and values that are
-  struct. Each key is the name of the subcommand. The struct includes the same
-  keys as the `config` struct used in `parse-args`. A `:help` key can be
-  provided and is used in the listing of subcommands.
+  The `subcommands` tuple is a series of key-value pairs. Each key is a string
+  and each value is a struct. The key is the name of the subcommand. The struct
+  includes the same keys as the `config` struct used in `parse-args`. A `:help`
+  key can be provided and is used in the listing of subcommands.
 
   ### Return Value
 
@@ -641,7 +684,7 @@
   ```
   [config subcommands]
   (set cols (get-cols))
-  (set command (conform-cmd (dyn :args)))
+  (set command (conform-command (dyn :args)))
   (set helped? false)
   (set errored? false)
   (def gargs @{})
@@ -650,6 +693,7 @@
   (var subcommand nil)
 
   (def [orules _] (conform-rules (get config :rules [])))
+  (def subconfigs (conform-subconfigs subcommands))
 
   (def all-args (conform-args (dyn :args)))
   (def num-args (length all-args))
@@ -673,7 +717,7 @@
              (= "help" arg)
              (do
                (set subcommand (get all-args (++ i)))
-               (def subconfig (subcommands subcommand))
+               (def subconfig (get-subconfig subcommand subconfigs))
                (cond
                  (nil? subcommand)
                  nil
@@ -687,7 +731,7 @@
 
              (do
                (set subcommand arg)
-               (def subconfig (subcommands subcommand))
+               (def subconfig (get-subconfig subcommand subconfigs))
                (if (nil? subconfig)
                  (usage-error "unrecognized subcommand '" subcommand "'")
                  (with-dyns [:args (-> (array/slice all-args i)
@@ -702,6 +746,6 @@
       (break)))
 
   (when (nil? subcommand)
-    (usage-with-subcommands (config :info) [orules subcommands]))
+    (usage-with-subcommands (config :info) [orules subconfigs]))
 
   @{:cmd command :globals gargs :sub subcommand :opts oargs :params pargs :error? errored? :help? helped?})

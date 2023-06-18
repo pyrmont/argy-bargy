@@ -113,7 +113,7 @@
 
 (deftest parse-subcommand-with-option-flag
   (def config {})
-  (def subcommands {"example" {:rules ["--foo" {:kind :flag}]}})
+  (def subcommands ["example" {:rules ["--foo" {:kind :flag}]}])
   (def actual
     (capture
       (with-dyns [:args @["program" "example" "--foo"]]
