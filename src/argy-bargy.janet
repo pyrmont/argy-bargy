@@ -248,6 +248,41 @@
     (print "For more information on each subcommand, type '" command " help <subcommand>'.")))
 
 
+(defn- usage-example
+  ```
+  Prints a usage example
+  ```
+  [orules prules]
+  (print
+    (indent-str
+      (string "usage: "
+              command
+              ;(map (fn [[name rule]]
+                      (unless (or (nil? rule) (rule :no-eg?))
+                        (string " [--" name
+                                (when (or (= :single (rule :kind))
+                                          (= :multi (rule :kind)))
+                                  (string " <" (or (rule :proxy) (rule :name)) ">"))
+                                "]")))
+                    orules)
+              ;(map (fn [[name rule]]
+                      (def proxy (string/ascii-upper name))
+                      (string " "
+                              (cond
+                                (and (rule :rest) (rule :required))
+                                (string proxy  "...")
+
+                                (rule :rest)
+                                (string "[" proxy "...]")
+
+                                proxy)))
+                    prules))
+      0
+      0
+      (+ 7 (length command) 1)
+      (- cols pad-right))))
+
+
 (defn- usage
   ```
   Print the usage message
@@ -261,36 +296,9 @@
     (set helped? true)
 
     (if (info :usages)
-      (each sample (info :usages)
-        (print sample))
-      (do
-        (print (indent-str
-                 (string "usage: "
-                         command
-                         ;(map (fn [[name rule]]
-                                 (unless (nil? rule)
-                                   (string " [--" name
-                                           (when (or (= :single (rule :kind))
-                                                     (= :multi (rule :kind)))
-                                             (string " <" (or (rule :proxy) (rule :name)) ">"))
-                                           "]")))
-                               orules)
-                         ;(map (fn [[name rule]]
-                                 (def proxy (string/ascii-upper name))
-                                 (string " "
-                                         (cond
-                                           (and (rule :rest) (rule :required))
-                                           (string proxy  "...")
-
-                                           (rule :rest)
-                                           (string "[" proxy "...]")
-
-                                           proxy)))
-                               prules))
-                 0
-                 0
-                 (+ 7 (length command) 1)
-                 (- cols pad-right)))))
+      (each example (info :usages)
+        (print example))
+      (usage-example orules prules))
 
     (when (info :about)
       (print)
@@ -313,8 +321,8 @@
     (set helped? true)
 
     (if (info :usages)
-      (each sample (info :usages)
-        (print sample))
+      (each example (info :usages)
+        (print example))
       (print "usage: " command " <subcommand> [args...]"))
 
     (when (info :about)
@@ -489,10 +497,11 @@
     (++ i))
 
   (unless help?
-    (array/push orules ["help" {:name  "help"
-                                :kind  :help
-                                :short "h"
-                                :help  "Show this help message."}]))
+    (array/push orules ["help" {:name   "help"
+                                :kind   :help
+                                :no-eg? true
+                                :short  "h"
+                                :help   "Show this help message."}]))
   [orules prules])
 
 
@@ -551,7 +560,7 @@
     be combined with other short options (e.g. `-lah`).
   * `:help` - The help text for the option, displayed in the usage message.
   * `:default` - A default value that is used if the option occurs.
-  * `:required` - Whether the option is required to occur.
+  * `:no-eg?` - Whether to hide the option from the generated usage example.
   * `:value` - A one-argument function that converts the text that is parsed to
     another kind of value. This function can be used for validation. If the
     return value is `nil`, the input is considered to fail parsing and a usage
@@ -587,9 +596,9 @@
   can have the following keys:
 
   * `:about` - Message describing the program at a high level.
-  * `:usages` - Collection of usage samples to be used in the usage message.
-    If no samples are provided, one will be generated automatically based on the
-    provided rules.
+  * `:usages` - Collection of usage examples to be used in the usage message.
+    If no examples are provided, one will be generated automatically based on
+    the provided rules.
   * `:opts` - Message printed immediately prior to listing of options.
   * `:params` - Message printed immediately prior to listing of parameters.
   * `:rider` - Message printed at the end of the usage message.
