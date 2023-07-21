@@ -39,7 +39,7 @@ is a struct that can have the following keys:
   be combined with other short options (e.g. `-lah`).
 * `:help` - The help text for the option, displayed in the usage message.
 * `:default` - A default value that is used if the option occurs.
-* `:required` - Whether the option is required to occur.
+* `:no-eg?` - Whether to hide the option from the generated usage example.
 * `:value` - A one-argument function that converts the text that is parsed to
   another kind of value. This function can be used for validation. If the
   return value is `nil`, the input is considered to fail parsing and a usage
@@ -75,9 +75,9 @@ The info struct contains messages that are used in the usage help. The struct
 can have the following keys:
 
 * `:about` - Message describing the program at a high level.
-* `:usages` - Collection of usage samples to be used in the usage message.
-  If no samples are provided, one will be generated automatically based on the
-  provided rules.
+* `:usages` - Collection of usage examples to be used in the usage message.
+  If no examples are provided, one will be generated automatically based on
+  the provided rules.
 * `:opts` - Message printed immediately prior to listing of options.
 * `:params` - Message printed immediately prior to listing of parameters.
 * `:rider` - Message printed at the end of the usage message.
@@ -89,7 +89,7 @@ keys. The value associated with each key is a table containing the values
 parsed for each matching rule. The table also includes `:error?` and `:help?`
 keys that can be used to determine if the parsing completed successfully.
 
-[1]: src/argy-bargy.janet#L468
+[1]: argy-bargy.janet#L534
 
 ## parse-args-with-subcommands
 
@@ -119,10 +119,10 @@ prior to the listing of subcommands.
 
 ### Subcommands
 
-The `subcommands` struct contains keys that are strings and values that are
-struct. Each key is the name of the subcommand. The struct includes the same
-keys as the `config` struct used in `parse-args`. A `:help` key can be
-provided and is used in the listing of subcommands.
+The `subcommands` tuple is a series of key-value pairs. Each key is a string
+and each value is a struct. The key is the name of the subcommand. The struct
+includes the same keys as the `config` struct used in `parse-args`. A `:help`
+key can be provided and is used in the listing of subcommands.
 
 ### Return Value
 
@@ -133,5 +133,5 @@ with the `:globals` and `:sub` keys are the globals options and the name of
 the subcommand respectively. The table also includes `:error?` and `:help?`
 keys that can be used to determine if the parsing completed successfully.
 
-[2]: src/argy-bargy.janet#L592
+[2]: argy-bargy.janet#L658
 

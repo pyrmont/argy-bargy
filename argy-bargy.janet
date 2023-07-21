@@ -505,7 +505,7 @@
   [orules prules])
 
 
-(defn conform-subconfigs
+(defn- conform-subconfigs
   ```
   Conforms subconfigs
   ```
