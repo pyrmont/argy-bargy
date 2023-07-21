@@ -2,33 +2,86 @@
 
 ## argy-bargy
 
-[parse-args](#parse-args), [parse-args-with-subcommands](#parse-args-with-subcommands)
+[hr](#hr), [max-width](#max-width), [pad-inset](#pad-inset), [pad-right](#pad-right), [parse-args](#parse-args)
+
+## hr
+
+**string**  | [source][1]
+
+```janet
+"---"
+```
+
+String to use to insert line breaks between argument descriptions
+
+[1]: argy-bargy.janet#L6
+
+## max-width
+
+**number**  | [source][2]
+
+```janet
+120
+```
+
+Maximum number of columns to use for usage messages
+
+[2]: argy-bargy.janet#L3
+
+## pad-inset
+
+**number**  | [source][3]
+
+```janet
+4
+```
+
+Number of columns to pad argument descriptions from the left
+
+[3]: argy-bargy.janet#L4
+
+## pad-right
+
+**number**  | [source][4]
+
+```janet
+0
+```
+
+Number of columns to pad argument descriptions from the right
+
+[4]: argy-bargy.janet#L5
 
 ## parse-args
 
-**function**  | [source][1]
+**function**  | [source][5]
 
 ```janet
-(parse-args config)
+(parse-args name config)
 ```
 
 Parse the `(dyn :args)` value for a program
 
-This function takes a `config` struct containing the following keys:
+This function takes a `name` and a `config`. `name` is a string that
+represents the name of the program and is used for usage messages. `config`
+is a struct containing the following keys:
 
 * `:rules` - Tuple of rules to use to parse the arguments.
 * `:info` - Struct of messages to use in help output.
 
+The `config` struct may also contain a tuple of subcommands under the `:subs`
+key.
+
 ### Rules
 
-The dynamic variable `:args` is parsed according to the rules tuple. This
-tuple is a series of key-value pairs.
+The rule tuple is a series of alternating rule names and rule contents. The
+rule name is either a string or a key. The rule contents is a struct.
 
 #### Options
 
-If the key is a string, the rule will be applied to option arguments
-(arguments that begin with a `-` or `--`). The value associated with each key
-is a struct that can have the following keys:
+If the rule name is a string, the rule contents will be applied to option
+arguments (arguments that begin with a `-` or `--`). The rule contents struct
+can have the following keys:
 
 * `:kind` - The kind of option. Values are `:flag`, `:count`, `:single` and
   `:multi`. A flag is a binary choice (e.g. true/false, on/off) that can
@@ -39,7 +92,7 @@ is a struct that can have the following keys:
   be combined with other short options (e.g. `-lah`).
 * `:help` - The help text for the option, displayed in the usage message.
 * `:default` - A default value that is used if the option occurs.
-* `:no-eg?` - Whether to hide the option from the generated usage example.
+* `:noex?` - Whether to hide the option from the generated usage example.
 * `:value` - A one-argument function that converts the text that is parsed to
   another kind of value. This function can be used for validation. If the
   return value is `nil`, the input is considered to fail parsing and a usage
@@ -53,9 +106,9 @@ Options will be separated by a blank line if the rules tuple includes a
 
 #### Parameters
 
-If the key is a keyword, the rule will be applied to parameter arguments
-(arguments that are not options). The value associated with each key is a
-struct that can have the following keys:
+If the rule name is a keyword, the rule contents will be applied to parameter
+arguments (arguments that are not options). The rule contents struct can have
+the following keys:
 
 * `:help` - Help text for the parameter, displayed in the usage message.
 * `:default` - Default value that is used if the parameter does not occur.
@@ -82,56 +135,26 @@ can have the following keys:
 * `:params` - Message printed immediately prior to listing of parameters.
 * `:rider` - Message printed at the end of the usage message.
 
-### Return Value
-
-Once parsed, the return value is a table with `:cmd`, `:opts` and `:params`
-keys. The value associated with each key is a table containing the values
-parsed for each matching rule. The table also includes `:error?` and `:help?`
-keys that can be used to determine if the parsing completed successfully.
-
-[1]: argy-bargy.janet#L534
-
-## parse-args-with-subcommands
-
-**function**  | [source][2]
-
-```janet
-(parse-args-with-subcommands config subcommands)
-```
-
-Parse the `(dyn :args)` value for a program with subcommands
-
-This function takes a `config` struct and a `subcommands` struct.
-
-### Config
-
-The `config` struct should contain the following keys:
-
-* `:rules` - Tuple of rules to use to parse the arguments.
-* `:info` - Struct of messages to use in help output.
-
-The rules tuple is similar to that in `parse-args` except that parameter
-rules are ignored.
-
-The info struct is similar to that in `parse-args` except that the `:params`
-key is ignored. A `:subcmds` key can be provided and is displayed immediately
-prior to the listing of subcommands.
-
 ### Subcommands
 
-The `subcommands` tuple is a series of key-value pairs. Each key is a string
-and each value is a struct. The key is the name of the subcommand. The struct
-includes the same keys as the `config` struct used in `parse-args`. A `:help`
-key can be provided and is used in the listing of subcommands.
+The subcommands tuple is a series of alternating subcommand names and
+subcommand configs. The subcommand name is a string that will match the name
+of a subcommand. The config is a struct of the same form as the `config`
+struct. Multiple levels of subcommands can be supported by simply having a
+subcommand's `config` struct contain a `:subs` key with a subcommands tuple
+of its own.
+
+In  addition to names and configs, the tuple can contain instances of the
+string "---". When printing usage information, subcommands that were
+separated by a "---" will be separated by a line break.
 
 ### Return Value
 
-Once parsed, the return value is a table with `:cmd`, `:globals`, `:sub`,
-`:opts` and `:params` keys.  The value associated with the `:cmd`, `:opts`
-and `:params` keys are the same as that in `parse-args`. The value associated
-with the `:globals` and `:sub` keys are the globals options and the name of
-the subcommand respectively. The table also includes `:error?` and `:help?`
-keys that can be used to determine if the parsing completed successfully.
+Once parsed, the return value is a table with `:cmd`, `:opts` and either
+`:params` or `:sub` keys. The value associated with each key is a table
+containing the values parsed for each matching rule. The table also includes
+`:error?` and `:help?` keys that can be used to determine if the parsing
+completed successfully.
 
-[2]: argy-bargy.janet#L658
+[5]: argy-bargy.janet#L508
 

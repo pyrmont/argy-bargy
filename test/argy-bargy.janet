@@ -19,10 +19,10 @@
   (def actual
     (capture
       (with-dyns [:args @["program" "--foo"]]
-        (argy-bargy/parse-args config))))
+        (argy-bargy/parse-args "program" config))))
   (def expect {:err ""
                :out ""
-               :res {:cmd "program" :error? false :help? false :opts @{"foo" true} :params @{}}})
+               :res {:cmd "program" :opts @{"foo" true} :params @{}}})
   (is (== expect actual)))
 
 
@@ -31,10 +31,10 @@
   (def actual
     (capture
       (with-dyns [:args @["program" "--foo" "--foo"]]
-        (argy-bargy/parse-args config))))
+        (argy-bargy/parse-args "program" config))))
   (def expect {:err ""
                :out ""
-               :res {:cmd "program" :error? false :help? false :opts @{"foo" 2} :params @{}}})
+               :res {:cmd "program" :opts @{"foo" 2} :params @{}}})
   (is (== expect actual)))
 
 
@@ -43,10 +43,10 @@
   (def actual
     (capture
       (with-dyns [:args @["program" "--foo" "bar"]]
-        (argy-bargy/parse-args config))))
+        (argy-bargy/parse-args "program" config))))
   (def expect {:err ""
                :out ""
-               :res {:cmd "program" :error? false :help? false :opts @{"foo" "bar"} :params @{}}})
+               :res {:cmd "program" :opts @{"foo" "bar"} :params @{}}})
   (is (== expect actual)))
 
 
@@ -55,10 +55,10 @@
   (def actual
     (capture
       (with-dyns [:args @["program" "--foo" "bar" "--foo" "qux"]]
-        (argy-bargy/parse-args config))))
+        (argy-bargy/parse-args "program" config))))
   (def expect {:err ""
                :out ""
-               :res {:cmd "program" :error? false :help? false :opts @{"foo" ["bar" "qux"]} :params @{}}})
+               :res {:cmd "program" :opts @{"foo" ["bar" "qux"]} :params @{}}})
   (is (== expect actual)))
 
 
@@ -70,10 +70,10 @@
   (def actual
     (capture
       (with-dyns [:args @["program" "--foo"]]
-        (argy-bargy/parse-args config))))
+        (argy-bargy/parse-args "program" config))))
   (def expect {:err (string msg "\n")
                :out ""
-               :res {:cmd "program" :error? true :help? false :opts @{} :params @{}}})
+               :res {:cmd "program" :error? true :opts @{} :params @{}}})
   (is (== expect actual)))
 
 
@@ -86,10 +86,10 @@
   (def actual
     (capture
       (with-dyns [:args @["program" "--help"]]
-        (argy-bargy/parse-args config))))
+        (argy-bargy/parse-args "program" config))))
   (def expect {:err ""
                :out (string msg "\n")
-               :res {:cmd "program" :error? false :help? true :opts @{} :params @{}}})
+               :res {:cmd "program" :help? true :opts @{} :params @{}}})
   (is (== expect actual)))
 
 
@@ -106,23 +106,34 @@
   (def actual
     (capture
       (with-dyns [:args @["program" "--help"]]
-        (argy-bargy/parse-args config))))
+        (argy-bargy/parse-args "program" config))))
   (def expect {:err ""
                :out (string msg "\n")
-               :res @{:cmd "program" :error? false :help? true :opts @{} :params @{}}})
+               :res @{:cmd "program" :help? true :opts @{} :params @{}}})
   (is (== expect actual)))
 
 
 (deftest parse-subcommand-with-option-flag
-  (def config {})
-  (def subcommands ["example" {:rules ["--foo" {:kind :flag}]}])
+  (def config {:subs ["example" {:rules ["--foo" {:kind :flag}]}]})
   (def actual
     (capture
       (with-dyns [:args @["program" "example" "--foo"]]
-        (argy-bargy/parse-args-with-subcommands config subcommands))))
+        (argy-bargy/parse-args "program" config))))
   (def expect {:err ""
                :out ""
-               :res @{:cmd "program" :error? false :help? false :globals @{} :sub "example" :opts @{"foo" true} :params @{}}})
+               :res @{:cmd "program" :opts @{} :sub {:cmd "example" :opts @{"foo" true} :params @{}}}})
+  (is (== expect actual)))
+
+
+(deftest parse-multiple-subcommands
+  (def config {:subs ["foo" {:subs ["bar" {}]}]})
+  (def actual
+    (capture
+      (with-dyns [:args @["program" "foo" "bar"]]
+        (argy-bargy/parse-args "program" config))))
+  (def expect {:err ""
+               :out ""
+               :res @{:cmd "program" :opts @{} :sub {:cmd "foo" :opts @{} :sub @{:cmd "bar" :opts @{} :params @{}}}}})
   (is (== expect actual)))
 
 
