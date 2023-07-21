@@ -9,7 +9,7 @@
   :dev-dependencies ["https://github.com/pyrmont/testament"])
 
 (declare-source
-  :source ["src/argy-bargy.janet"])
+  :source ["argy-bargy.janet"])
 
 (task "dev-deps" []
   (if-let [deps ((dyn :project) :dependencies)]

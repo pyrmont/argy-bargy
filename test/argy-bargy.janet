@@ -1,5 +1,7 @@
-(import testament :prefix "")
-(import ../src/argy-bargy)
+(use testament)
+
+
+(import ../argy-bargy)
 
 
 (defmacro capture [& body]
