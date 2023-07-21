@@ -111,16 +111,16 @@ arguments (arguments that are not options). The rule contents struct can have
 the following keys:
 
 * `:help` - Help text for the parameter, displayed in the usage message.
-* `:default` - Default value that is used if the parameter does not occur.
-* `:required` - Whether the parameter is required to exist.
+* `:default` - Default value that is used if the parameter is not present.
+* `:req?` - Whether the parameter is required to be present.
 * `:value` - One-argument function that converts the textual value that is
   parsed to a value that will be returned in the return struct. This function
   can be used for validation. If the return value is `nil`, the input is
   considered to fail parsing and a usage error message is printed instead.
   Instead of a function, a keyword can be provided and Argy-Bargy's converter
   will be used instead. The valid keywords are `:string` and `:integer`.
-* `:rest` - Whether this rule should capture all following parameters. Only
-  one parameter rule can have `:rest` set to `true`.
+* `:rest?` - Whether this rule should capture all unassigned parameters. Only
+  one parameter rule can have `:rest?` set to `true`.
 
 ### Info
 
@@ -156,5 +156,5 @@ containing the values parsed for each matching rule. The table also includes
 `:error?` and `:help?` keys that can be used to determine if the parsing
 completed successfully.
 
-[5]: argy-bargy.janet#L508
+[5]: argy-bargy.janet#L511
 

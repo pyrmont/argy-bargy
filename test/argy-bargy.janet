@@ -62,6 +62,34 @@
   (is (== expect actual)))
 
 
+(deftest parse-with-param-number
+  (def config {:rules [:foo {:help "A parameter"
+                             :value :integer}]})
+  (def actual
+    (capture
+      (with-dyns [:args @["program" "1"]]
+        (argy-bargy/parse-args "program" config))))
+  (def expect {:err ""
+               :out ""
+               :res {:cmd "program" :opts @{} :params @{:foo 1}}})
+  (is (== expect actual)))
+
+
+(deftest parse-with-param-capture
+  (def config {:rules [:foo {:value :integer}
+                       :bar {:rest? true
+                             :value :integer}
+                       :qux {:value :integer}]})
+  (def actual
+    (capture
+      (with-dyns [:args @["program" "1" "2" "3" "4" "5"]]
+        (argy-bargy/parse-args "program" config))))
+  (def expect {:err ""
+               :out ""
+               :res {:cmd "program" :opts @{} :params @{:foo 1 :bar [2 3 4] :qux 5}}})
+  (is (== expect actual)))
+
+
 (deftest parse-with-usage-error
   (def msg
       `program: unrecognized option '--foo'

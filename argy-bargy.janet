@@ -55,8 +55,8 @@
           (errorf "each rule must be struct or table: %p" v))
         (unless (or (keyword? k) ({:flag true :count true :single true :multi true} (v :kind)))
           (errorf "each option rule must be of kind :flag, :count, :single or :multi: %p" v))
-        (when (and (keyword? k) rest-capture?)
-          (errorf "parameter rules cannot occur after rule that captures :rest: %p" v))
+        (when (and (keyword? k) rest-capture? (v :rest?))
+          (errorf "multiple parameter rules cannot capture :rest?: %p" v))
         (cond
           (string? k)
           (let [name (if (string/has-prefix? "--" k) (string/slice k 2) k)]
@@ -68,7 +68,7 @@
           (keyword? k)
           (do
             (array/push prules [k v])
-            (set rest-capture? (v :rest))))))
+            (set rest-capture? (v :rest?))))))
     (++ i))
 
   (unless help?
@@ -250,7 +250,8 @@
   (var pad 0)
 
   (each [name rule] rules
-    (def usage-prefix (string " " (string/ascii-upper name)))
+    (def proxy (or (rule :proxy) name))
+    (def usage-prefix (string " " proxy))
     (def usage-help
       (stitch [(rule :help)
                (when (rule :default)
@@ -356,13 +357,13 @@
                                 "]")))
                     orules)
               ;(map (fn [[name rule]]
-                      (def proxy (string/ascii-upper name))
+                      (def proxy (or (rule :proxy) name))
                       (string " "
                               (cond
-                                (and (rule :rest) (rule :required))
-                                (string proxy  "...")
+                                (and (rule :rest?) (rule :required))
+                                (string proxy "...")
 
-                                (rule :rest)
+                                (rule :rest?)
                                 (string "[" proxy "...]")
 
                                 proxy)))
@@ -474,34 +475,36 @@
     (usage-error "unrecognized option '" arg "'")))
 
 
-(defn- rest-capture
-  ```
-  Get the parameter that captures the rest of the values (if defined)
-  ```
-  [rules]
-  (when-let [[name rule] (last rules)]
-    (and (rule :rest) [name rule])))
-
-
 (defn- consume-param
   ```
   Consume a parameter
   ```
-  [result prules args i]
+  [result prule args i rem]
   (def params (result :params))
-  (def pos (length params))
-  (if-let [[name rule] (or (get prules pos)
-                           (rest-capture prules))]
-    (if-let [arg (get args i)]
+  (def arg (args i))
+  (if-let [[name rule] prule]
+    (if (rule :rest?)
+      (do
+        (def vals @[])
+        (var j 0)
+        (each a (array/slice args i (- -1 rem))
+          (if-let [val (convert a (rule :value))]
+            (do
+              (array/push vals val)
+              (++ j))
+            (do
+              (usage-error "'" a "' is invalid value for " (or (rule :proxy) name))
+              (break))))
+        (unless errored?
+          (put params name vals)
+          (+ i j)))
       (if-let [val (convert arg (rule :value))]
         (do
-          (if (rule :rest)
-            (put params name (array/push (or (params name) @[]) val))
-            (put params name val))
+          (put params name val)
           (inc i))
-        (usage-error "'" arg "' is invalid value for " (string/ascii-upper name)))
-      (usage-error "no value for " (string/ascii-upper name)))
+        (usage-error "'" arg "' is invalid value for " (or (rule :proxy) name))))
     (usage-error "too many parameters passed")))
+
 
 # Parsing functions
 
@@ -558,16 +561,16 @@
   the following keys:
 
   * `:help` - Help text for the parameter, displayed in the usage message.
-  * `:default` - Default value that is used if the parameter does not occur.
-  * `:required` - Whether the parameter is required to exist.
+  * `:default` - Default value that is used if the parameter is not present.
+  * `:req?` - Whether the parameter is required to be present.
   * `:value` - One-argument function that converts the textual value that is
     parsed to a value that will be returned in the return struct. This function
     can be used for validation. If the return value is `nil`, the input is
     considered to fail parsing and a usage error message is printed instead.
     Instead of a function, a keyword can be provided and Argy-Bargy's converter
     will be used instead. The valid keywords are `:string` and `:integer`.
-  * `:rest` - Whether this rule should capture all following parameters. Only
-    one parameter rule can have `:rest` set to `true`.
+  * `:rest?` - Whether this rule should capture all unassigned parameters. Only
+    one parameter rule can have `:rest?` set to `true`.
 
   ### Info
 
@@ -611,15 +614,16 @@
 
   (def [orules prules] (conform-rules (get config :rules [])))
   (def subconfigs (conform-subconfigs (get config :subs [])))
+  (def args (conform-args (dyn :args)))
 
   (def result @{:cmd command :opts @{} :params (when (empty? subconfigs) @{})})
+  (def params @[])
 
-  (def all-args (conform-args (dyn :args)))
-  (def num-args (length all-args))
+
+  (def num-args (length args))
   (var i 1)
-
   (while (< i num-args)
-    (def arg (get all-args i))
+    (def arg (get args i))
     (set i (cond
              (or (= "--help" arg) (= "-h" arg))
              (usage config)
@@ -628,25 +632,27 @@
              (usage-error "illegal use of '--'")
 
              (string/has-prefix? "--" arg)
-             (consume-option result orules all-args i)
+             (consume-option result orules args i)
 
              (= "-" arg)
              (usage-error "illegal use of '-'")
 
              (string/has-prefix? "-" arg)
-             (consume-option result orules all-args i true)
+             (consume-option result orules args i true)
 
-             (nil? subconfigs)
-             (consume-param result prules all-args i)
+             (empty? subconfigs)
+             (do
+               (array/push params arg)
+               (inc i))
 
              (do
                (def help? (= "help" arg))
-               (def subcommand (if help? (get all-args (inc i)) arg))
+               (def subcommand (if help? (get args (inc i)) arg))
                (def subconfig (get-subconfig subcommand subconfigs))
                (if subcommand
                  (if subconfig
                    (if (not help?)
-                     (with-dyns [:args (array/slice all-args i)]
+                     (with-dyns [:args (array/slice args i)]
                        (def subresult (parse-args (string command " " arg) subconfig))
                        (unless (or (subresult :error?) (subresult :help?))
                          (put subresult :cmd subcommand)
@@ -654,14 +660,24 @@
                          (break)))
                      (usage subconfig))
                    (usage-error "unrecognized subcommand '" subcommand "'"))
-                 (usage-error "no subcommand specified after 'helpj'")))))
+                 (usage-error "no subcommand specified after 'help'")))))
     (when (nil? i)
       (break)))
 
-  (each [name rule] prules
-    (when (nil? (get-in result [:params name]))
-      (if (rule :required)
-        (usage-error (string/ascii-upper name) " is required")
-        (put-in result [:params name] (rule :default)))))
+  (unless (or errored? helped?)
+    (def num-params (length params))
+    (var i 0)
+    (def num-rules (length prules))
+    (var j 0)
+    (while (< i num-params)
+      (def prule (prules j))
+      (set i (consume-param result prule params i (- num-rules j 1)))
+      (++ j))
+    (while (< j num-rules)
+      (def [name rule] (prules j))
+      (if (get-in prules [i :req?])
+        (usage-error (or (rule :proxy) name) " is required")
+        (put-in result [:params name] (rule :default)))
+      (++ j)))
 
   (merge-into result {:error? errored? :help? helped?}))
