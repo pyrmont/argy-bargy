@@ -25,8 +25,15 @@
                  :rest      '(some 1)
                  :long-opt  (* '(* "--" (any (if-not "=" 1))) (? (* "=" :rest)))
                  :short-opt (* '(* "-" 1) (any (% (* (constant "-") '1))))})
-  (each arg args
-    (array/concat res (peg/match grammar arg)))
+  (def num-args (length args))
+  (var i 0)
+  (while (< i num-args)
+    (def arg (args i))
+    (when (= "--" arg)
+      (array/concat res (array/slice args i))
+      (break))
+    (array/concat res (peg/match grammar arg))
+    (++ i))
   res)
 
 
@@ -634,13 +641,17 @@
              (usage config)
 
              (= "--" arg)
-             (usage-error "illegal use of '--'")
+             (do
+               (array/concat params (array/slice args (inc i)))
+               (break))
 
              (string/has-prefix? "--" arg)
              (consume-option result orules args i)
 
              (= "-" arg)
-             (usage-error "illegal use of '-'")
+             (do
+               (array/push params arg)
+               (inc i))
 
              (string/has-prefix? "-" arg)
              (consume-option result orules args i true)
@@ -677,7 +688,7 @@
     (def num-rules (length prules))
     (var j 0)
     (while (< i num-params)
-      (def prule (prules j))
+      (def prule (get prules j))
       (set i (consume-param result prule params i (- num-rules j 1)))
       (++ j))
     (while (< j num-rules)
