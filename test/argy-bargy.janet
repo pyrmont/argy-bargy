@@ -109,6 +109,8 @@
   (def msg
       `usage: program
 
+      Options:
+
        -h, --help    Show this help message.`)
   (def config {})
   (def actual
@@ -124,6 +126,8 @@
 (deftest parse-with-usage-help-separators
   (def msg
        `usage: program [--foo]
+
+       Options:
 
             --foo     An option.
 

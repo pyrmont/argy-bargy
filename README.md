@@ -68,7 +68,11 @@ usage: program [--foo <foo>] [--bar] srcs...
 
 A program that does something to the 'srcs' parameters.
 
+Parameters:
+
  srcs    The source files for the program.
+
+Options:
 
      --foo <foo>    The option foo takes a single value.
      --bar          The option bar is a flag.
@@ -83,12 +87,12 @@ For more information, visit our website at example.com/program.
 (import argy-bargy)
 
 (def subcommands
-  {"foo" {:rules {:kind :single
+  ["foo" {:rules {:kind :single
                   :help "The option foo takes a single value."}
           :help  "Run the foo command."}
    "bar" {:rules {:kind :flag
                   :help "The option bar is a flag."}
-          :help  "Run the bar command."}})
+          :help  "Run the bar command."}])
 
 (def info
   {:about "A program that provides subcommands that do something."
@@ -106,7 +110,11 @@ usage: program <subcommand> [<args>]
 
 A program that provides subcommands that do something.
 
+Options:
+
  -h, --help    Show this help message.
+
+Subcommands:
 
  foo    Run the foo command.
  bar    Run the bar command.

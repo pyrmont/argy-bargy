@@ -261,6 +261,8 @@
 
   (unless (empty? usages)
     (print)
+    (print "Parameters:")
+    (print)
     (when (info :params)
       (print (info :params)))
     (each [prefix help] usages
@@ -297,15 +299,16 @@
 
   (unless (empty? usages)
     (print)
+    (print "Options:")
+    (print)
     (when (info :opts)
-      (print (info :opts))))
-
-  (each [prefix help] usages
-    (if (nil? help)
-      (print)
-      (do
-        (def startp (- pad (length prefix)))
-        (print prefix (indent-str help (length prefix) startp pad (- cols pad-right)))))))
+      (print (info :opts)))
+    (each [prefix help] usages
+      (if (nil? help)
+        (print)
+        (do
+          (def startp (- pad (length prefix)))
+          (print prefix (indent-str help (length prefix) startp pad (- cols pad-right))))))))
 
 
 (defn- usage-subcommands
@@ -326,6 +329,8 @@
         (set pad (max (+ pad-inset (length usage-prefix)) pad)))))
 
   (unless (empty? usages)
+    (print)
+    (print "Subcommands:")
     (print)
     (when (info :subcmds)
       (print (info :subcmds)))
@@ -653,12 +658,14 @@
                  (if subconfig
                    (if (not help?)
                      (with-dyns [:args (array/slice args i)]
-                       (def subresult (parse-args (string command " " arg) subconfig))
+                       (def subresult (parse-args (string command " " subcommand) subconfig))
                        (unless (or (subresult :error?) (subresult :help?))
                          (put subresult :cmd subcommand)
                          (put result :sub subresult)
                          (break)))
-                     (usage subconfig))
+                     (do
+                       (set command (string command " " subcommand))
+                       (usage subconfig)))
                    (usage-error "unrecognized subcommand '" subcommand "'"))
                  (usage-error "no subcommand specified after 'help'")))))
     (when (nil? i)
