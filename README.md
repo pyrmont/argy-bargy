@@ -64,7 +64,7 @@ Argy-Bargy can be used like this:
 If the argument is `--help`, the following will be printed to stdout:
 
 ```text
-usage: example [--foo <foo>] [--bar] [SRCS...]
+usage: program [--foo <foo>] [--bar] [SRCS...]
 
 A program that does something to the SRCS parameters.
 
