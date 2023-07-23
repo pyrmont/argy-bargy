@@ -148,7 +148,7 @@
   ```
   Gets a subconfig matching a name
   ```
-  [name subconfigs]
+  [subconfigs name]
   (var res nil)
   (each [k v] subconfigs
     (when (= k name)
@@ -664,7 +664,7 @@
              (do
                (def help? (= "help" arg))
                (def subcommand (if help? (get args (inc i)) arg))
-               (def subconfig (get-subconfig subcommand subconfigs))
+               (def subconfig (get-subconfig subconfigs subcommand))
                (if subcommand
                  (if subconfig
                    (if (not help?)
