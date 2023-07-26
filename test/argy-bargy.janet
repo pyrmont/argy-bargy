@@ -102,6 +102,18 @@
   (is (== expect actual)))
 
 
+(deftest parse-with-param-req
+  (def config {:rules [:foo {:req? true}]})
+  (def actual
+    (capture
+      (with-dyns [:args @["program"]]
+        (argy-bargy/parse-args "program" config))))
+  (def expect {:err "program: foo is required\nTry 'program --help' for more information.\n"
+               :out ""
+               :res @{:cmd "program" :error? true :opts @{} :params @{}}})
+  (is (== expect actual)))
+
+
 (deftest parse-subcommand-with-option-flag
   (def config {:subs ["example" {:rules ["--foo" {:kind :flag}]}]})
   (def actual

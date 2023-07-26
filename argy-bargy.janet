@@ -268,10 +268,10 @@
 
   (unless (empty? usages)
     (print)
-    (print "Parameters:")
+    (if (info :params-header)
+      (print (info :params-header))
+      (print "Parameters:"))
     (print)
-    (when (info :params)
-      (print (info :params)))
     (each [prefix help] usages
       (def startp (- pad (length prefix)))
       (print prefix (indent-str help (length prefix) startp pad (- cols pad-right))))))
@@ -306,10 +306,10 @@
 
   (unless (empty? usages)
     (print)
-    (print "Options:")
+    (if (info :opts-header)
+      (print (info :opts-header))
+      (print "Options:"))
     (print)
-    (when (info :opts)
-      (print (info :opts)))
     (each [prefix help] usages
       (if (nil? help)
         (print)
@@ -337,10 +337,10 @@
 
   (unless (empty? usages)
     (print)
-    (print "Subcommands:")
+    (if (info :subs-header)
+      (print (info :subs-header))
+      (print "Subcommands:"))
     (print)
-    (when (info :subcmds)
-      (print (info :subcmds)))
     (each [prefix help] usages
       (if (nil? help)
         (print)
@@ -371,14 +371,13 @@
               ;(map (fn [[name rule]]
                       (def proxy (or (rule :proxy) name))
                       (string " "
-                              (cond
-                                (and (rule :rest?) (rule :required))
-                                (string proxy "...")
-
-                                (rule :rest?)
-                                (string "[" proxy "...]")
-
-                                proxy)))
+                              (unless (rule :req?) "[")
+                              "<"
+                              proxy
+                              (when (rule :rest?) "...")
+                              ">"
+                              (unless (rule :req?) "]"))
+                      )
                     prules)
               (unless (empty? subconfigs)
                 " <subcommand> [<args>]"))
@@ -693,8 +692,10 @@
       (++ j))
     (while (< j num-rules)
       (def [name rule] (prules j))
-      (if (get-in prules [i :req?])
-        (usage-error (or (rule :proxy) name) " is required")
+      (if (rule :req?)
+        (do
+          (usage-error (or (rule :proxy) name) " is required")
+          (break))
         (put-in result [:params name] (rule :default)))
       (++ j)))
 
