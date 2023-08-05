@@ -115,7 +115,7 @@
 
 (deftest parse-with-usage-help
   (def msg
-      `usage: program
+      `Usage: program
 
       Options:
 
@@ -130,7 +130,7 @@
 
 (deftest parse-with-usage-help-separators
   (def msg
-       `usage: program [--foo]
+       `Usage: program [--foo]
 
        Options:
 

@@ -358,7 +358,7 @@
   [orules prules subconfigs]
   (xprint help
     (indent-str
-      (string "usage: "
+      (string "Usage: "
               command
               ;(map (fn [[name rule]]
                       (unless (or (nil? rule) (rule :noex?))
