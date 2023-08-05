@@ -150,11 +150,11 @@ separated by a "---" will be separated by a line break.
 
 ### Return Value
 
-Once parsed, the return value is a table with `:cmd`, `:opts` and either
-`:params` or `:sub` keys. The value associated with each key is a table
-containing the values parsed for each matching rule. The table also includes
-`:error?` and `:help?` keys that can be used to determine if the parsing
-completed successfully.
+Once parsed, the return value is a table with `:cmd`, `:opts`, and either
+`:params` or `:sub` keys. The values associated with `:opts` and `:params`
+are tables containing the values parsed according to the rules. The table
+also includes `:err` and `:help` keys that contain either the error or help
+messages that may have been generated during parsing.
 
-[5]: argy-bargy.janet#L523
+[5]: argy-bargy.janet#L603
 
