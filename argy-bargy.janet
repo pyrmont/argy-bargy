@@ -7,8 +7,9 @@
 
 (var- cols nil)
 (var- command nil)
-(var- helped? false)
-(var- errored? false)
+
+(def- err @"")
+(def- help @"")
 
 
 # Utility functions
@@ -242,10 +243,9 @@
   Print the usage error message to stderr
   ```
   [& msg]
-  (unless (or errored? helped?)
-    (set errored? true)
-    (eprint command ": " ;msg)
-    (eprint "Try '" command " --help' for more information.")))
+  (when (and (empty? err) (empty? help))
+    (xprint err command ": " ;msg)
+    (xprint err "Try '" command " --help' for more information.")))
 
 
 (defn- usage-parameters
@@ -267,14 +267,14 @@
     (set pad (max (+ pad-inset (length usage-prefix)) pad)))
 
   (unless (empty? usages)
-    (print)
+    (xprint help)
     (if (info :params-header)
-      (print (info :params-header))
-      (print "Parameters:"))
-    (print)
-    (each [prefix help] usages
+      (xprint help (info :params-header))
+      (xprint help "Parameters:"))
+    (xprint help)
+    (each [prefix msg] usages
       (def startp (- pad (length prefix)))
-      (print prefix (indent-str help (length prefix) startp pad (- cols pad-right))))))
+      (xprint help prefix (indent-str msg (length prefix) startp pad (- cols pad-right))))))
 
 
 (defn- usage-options
@@ -305,17 +305,17 @@
         (set pad (max (+ pad-inset (length usage-prefix)) pad)))))
 
   (unless (empty? usages)
-    (print)
+    (xprint help)
     (if (info :opts-header)
-      (print (info :opts-header))
-      (print "Options:"))
-    (print)
-    (each [prefix help] usages
-      (if (nil? help)
-        (print)
+      (xprint help (info :opts-header))
+      (xprint help "Options:"))
+    (xprint help)
+    (each [prefix msg] usages
+      (if (nil? msg)
+        (xprint help)
         (do
           (def startp (- pad (length prefix)))
-          (print prefix (indent-str help (length prefix) startp pad (- cols pad-right))))))))
+          (xprint help prefix (indent-str msg (length prefix) startp pad (- cols pad-right))))))))
 
 
 (defn- usage-subcommands
@@ -336,19 +336,19 @@
         (set pad (max (+ pad-inset (length usage-prefix)) pad)))))
 
   (unless (empty? usages)
-    (print)
+    (xprint help)
     (if (info :subs-header)
-      (print (info :subs-header))
-      (print "Subcommands:"))
-    (print)
-    (each [prefix help] usages
-      (if (nil? help)
-        (print)
+      (xprint help (info :subs-header))
+      (xprint help "Subcommands:"))
+    (xprint help)
+    (each [prefix msg] usages
+      (if (nil? msg)
+        (xprint help)
         (do
           (def startp (- pad (length prefix)))
-          (print prefix (indent-str help (length prefix) startp pad (- cols pad-right))))))
-    (print)
-    (print "For more information on each subcommand, type '" command " help <subcommand>'.")))
+          (xprint help prefix (indent-str msg (length prefix) startp pad (- cols pad-right))))))
+    (xprint help)
+    (xprint help "For more information on each subcommand, type '" command " help <subcommand>'.")))
 
 
 (defn- usage-example
@@ -356,7 +356,7 @@
   Prints a usage example
   ```
   [orules prules subconfigs]
-  (print
+  (xprint help
     (indent-str
       (string "usage: "
               command
@@ -396,17 +396,15 @@
   (def [orules prules] (conform-rules (get config :rules [])))
   (def subconfigs (conform-subconfigs (get config :subs [])))
 
-  (unless (or errored? helped?)
-    (set helped? true)
-
+  (when (and (empty? err) (empty? help))
     (if (info :usages)
       (each example (info :usages)
-        (print example))
+        (xprint help example))
       (usage-example orules prules subconfigs))
 
     (when (info :about)
-      (print)
-      (print (indent-str (info :about) 0)))
+      (xprint help)
+      (xprint help (indent-str (info :about) 0)))
 
     (unless (empty? prules)
       (usage-parameters info prules))
@@ -417,8 +415,8 @@
       (usage-subcommands info subconfigs))
 
     (when (info :rider)
-      (print)
-      (print (indent-str (info :rider) 0)))))
+      (xprint help)
+      (xprint help (indent-str (info :rider) 0)))))
 
 
 # Processing functions
@@ -506,7 +504,7 @@
             (do
               (usage-error "'" a "' is invalid value for " (or (rule :proxy) name))
               (break))))
-        (unless errored?
+        (when (empty? err)
           (put params name vals)
           (+ i j)))
       (if-let [val (convert arg (rule :value))]
@@ -518,6 +516,89 @@
 
 
 # Parsing functions
+
+(defn- parse-args-impl
+  ```
+  Internal implementation to allow nested subcommands
+  ```
+  [name config]
+  (set command name)
+
+  (def [orules prules] (conform-rules (get config :rules [])))
+  (def subconfigs (conform-subconfigs (get config :subs [])))
+  (def args (conform-args (dyn :args)))
+
+  (def result @{:cmd command :opts @{} :params (when (empty? subconfigs) @{})})
+  (def params @[])
+
+  (def num-args (length args))
+  (var i 1)
+  (while (< i num-args)
+    (def arg (get args i))
+    (set i (cond
+             (or (= "--help" arg) (= "-h" arg))
+             (usage config)
+
+             (= "--" arg)
+             (do
+               (array/concat params (array/slice args (inc i)))
+               (break))
+
+             (string/has-prefix? "--" arg)
+             (consume-option result orules args i)
+
+             (= "-" arg)
+             (do
+               (array/push params arg)
+               (inc i))
+
+             (string/has-prefix? "-" arg)
+             (consume-option result orules args i true)
+
+             (empty? subconfigs)
+             (do
+               (array/push params arg)
+               (inc i))
+
+             (do
+               (def help? (= "help" arg))
+               (def subcommand (if help? (get args (inc i)) arg))
+               (def subconfig (get-subconfig subconfigs subcommand))
+               (if subcommand
+                 (if subconfig
+                   (if (not help?)
+                     (with-dyns [:args (array/slice args i)]
+                       (def subresult (parse-args-impl (string command " " subcommand) subconfig))
+                       (when (and (empty? err) (empty? help))
+                         (put subresult :cmd subcommand)
+                         (put result :sub subresult)
+                         (break)))
+                     (do
+                       (set command (string command " " subcommand))
+                       (usage subconfig)))
+                   (usage-error "unrecognized subcommand '" subcommand "'"))
+                 (usage-error "no subcommand specified after 'help'")))))
+    (when (nil? i)
+      (break)))
+
+  (when (and (empty? err) (empty? help))
+    (def num-params (length params))
+    (var i 0)
+    (def num-rules (length prules))
+    (var j 0)
+    (while (< i num-params)
+      (def prule (get prules j))
+      (set i (consume-param result prule params i (- num-rules j 1)))
+      (++ j))
+    (while (< j num-rules)
+      (def [name rule] (prules j))
+      (if (rule :req?)
+        (do
+          (usage-error (or (rule :proxy) name) " is required")
+          (break))
+        (put-in result [:params name] (rule :default)))
+      (++ j)))
+  result)
 
 (defn parse-args
   ```
@@ -611,92 +692,16 @@
 
   ### Return Value
 
-  Once parsed, the return value is a table with `:cmd`, `:opts` and either
-  `:params` or `:sub` keys. The value associated with each key is a table
-  containing the values parsed for each matching rule. The table also includes
-  `:error?` and `:help?` keys that can be used to determine if the parsing
-  completed successfully.
+  Once parsed, the return value is a table with `:cmd`, `:opts`, and either
+  `:params` or `:sub` keys. The values associated with `:opts` and `:params`
+  are tables containing the values parsed according to the rules. The table
+  also includes `:err` and `:help` keys that contain either the error or help
+  messages that may have been generated during parsing.
   ```
   [name config]
   (set cols (get-cols))
-  (set command name)
-  (set helped? nil)
-  (set errored? nil)
-
-  (def [orules prules] (conform-rules (get config :rules [])))
-  (def subconfigs (conform-subconfigs (get config :subs [])))
-  (def args (conform-args (dyn :args)))
-
-  (def result @{:cmd command :opts @{} :params (when (empty? subconfigs) @{})})
-  (def params @[])
-
-
-  (def num-args (length args))
-  (var i 1)
-  (while (< i num-args)
-    (def arg (get args i))
-    (set i (cond
-             (or (= "--help" arg) (= "-h" arg))
-             (usage config)
-
-             (= "--" arg)
-             (do
-               (array/concat params (array/slice args (inc i)))
-               (break))
-
-             (string/has-prefix? "--" arg)
-             (consume-option result orules args i)
-
-             (= "-" arg)
-             (do
-               (array/push params arg)
-               (inc i))
-
-             (string/has-prefix? "-" arg)
-             (consume-option result orules args i true)
-
-             (empty? subconfigs)
-             (do
-               (array/push params arg)
-               (inc i))
-
-             (do
-               (def help? (= "help" arg))
-               (def subcommand (if help? (get args (inc i)) arg))
-               (def subconfig (get-subconfig subconfigs subcommand))
-               (if subcommand
-                 (if subconfig
-                   (if (not help?)
-                     (with-dyns [:args (array/slice args i)]
-                       (def subresult (parse-args (string command " " subcommand) subconfig))
-                       (unless (or (subresult :error?) (subresult :help?))
-                         (put subresult :cmd subcommand)
-                         (put result :sub subresult)
-                         (break)))
-                     (do
-                       (set command (string command " " subcommand))
-                       (usage subconfig)))
-                   (usage-error "unrecognized subcommand '" subcommand "'"))
-                 (usage-error "no subcommand specified after 'help'")))))
-    (when (nil? i)
-      (break)))
-
-  (unless (or errored? helped?)
-    (def num-params (length params))
-    (var i 0)
-    (def num-rules (length prules))
-    (var j 0)
-    (while (< i num-params)
-      (def prule (get prules j))
-      (set i (consume-param result prule params i (- num-rules j 1)))
-      (++ j))
-    (while (< j num-rules)
-      (def [name rule] (prules j))
-      (if (rule :req?)
-        (do
-          (usage-error (or (rule :proxy) name) " is required")
-          (break))
-        (put-in result [:params name] (rule :default)))
-      (++ j)))
-
-  (merge-into result {:error? errored? :help? helped?}))
+  (def res (-> (parse-args-impl name config)
+               (merge-into {:err (string err) :help (string help)})))
+  (buffer/clear err)
+  (buffer/clear help)
+  res)
