@@ -60,7 +60,7 @@ Number of columns to pad argument descriptions from the right
 (parse-args name config)
 ```
 
-Parse the `(dyn :args)` value for a program
+Parses the `(dyn :args)` value for a program
 
 This function takes a `name` and a `config`. `name` is a string that
 represents the name of the program and is used for usage messages. `config`
@@ -156,5 +156,5 @@ are tables containing the values parsed according to the rules. The table
 also includes `:err` and `:help` keys that contain either the error or help
 messages that may have been generated during parsing.
 
-[5]: argy-bargy.janet#L603
+[5]: argy-bargy.janet#L624
 

@@ -16,9 +16,9 @@
 
 (defn- conform-args
   ```
-  Conform arguments
+  Conforms arguments
 
-  In particular, split short-options out if provided together.
+  In particular, splits short-options out if provided together.
   ```
   [args]
   (def res @[])
@@ -40,7 +40,7 @@
 
 (defn- conform-rules
   ```
-  Conform rules
+  Conforms rules
   ```
   [rules]
   (var rest-capture? false)
@@ -114,7 +114,7 @@
 
 (defn- get-cols
   ```
-  Get the columns in the terminal
+  Gets the columns in the terminal
   ```
   []
   (if (nil? cols)
@@ -134,7 +134,7 @@
 
 (defn- get-rule
   ```
-  Get a rule matching a name
+  Gets a rule matching a name
   ```
   [name rules]
   (var res nil)
@@ -160,7 +160,7 @@
 
 (defn- split-words
   ```
-  Split a string into words
+  Splits a string into words
   ```
   [str]
   (def res @[])
@@ -189,8 +189,9 @@
 
 (defn- stitch
   ```
-  Stitch together components into a string, only adding a separator when
-  adjacent components are non-nil
+  Stitches together components into a string
+
+  Only adds a separator when adjacent components are non-nil.
   ```
   [parts &opt sep]
   (default sep " ")
@@ -199,10 +200,10 @@
 
 (defn- indent-str
   ```
-  Indent a string by a number of spaces at the start
+  Indents a string by a number of spaces at the start
 
-  If a maximum width is provided, wrap and indent lines by the
-  hanging padding.
+  If a maximum width is provided, wraps and indents lines by the hanging
+  padding.
   ```
   [str startw &opt startp hangp maxw]
   (default startp 0)
@@ -240,7 +241,7 @@
 
 (defn- usage-error
   ```
-  Print the usage error message to stderr
+  Prints the usage error message to `err`
   ```
   [& msg]
   (when (and (empty? err) (empty? help))
@@ -250,7 +251,7 @@
 
 (defn- usage-parameters
   ```
-  Print the usage descriptions for the parameters
+  Prints the usage descriptions for the parameters to `help`
   ```
   [info rules]
   (def usages @[])
@@ -279,7 +280,7 @@
 
 (defn- usage-options
   ```
-  Print the usage descriptions for the options
+  Prints the usage descriptions for the options to `help`
   ```
   [info rules]
   (def usages @[])
@@ -320,7 +321,7 @@
 
 (defn- usage-subcommands
   ```
-  Print the usage descriptions for the subcommands
+  Prints the usage descriptions for the subcommands to `help`
   ```
   [info subconfigs]
   (def usages @[])
@@ -353,7 +354,7 @@
 
 (defn- usage-example
   ```
-  Prints a usage example
+  Prints a usage example to `help`
   ```
   [orules prules subconfigs]
   (xprint help
@@ -389,7 +390,7 @@
 
 (defn- usage
   ```
-  Print the usage message
+  Prints the usage message to `help`
   ```
   [config]
   (def info (get config :info {}))
@@ -423,7 +424,7 @@
 
 (defn- convert
   ```
-  Convert a textual value using the converter
+  Converts a textual value using the converter
 
   Internal functions are called if the converter is one of the following:
 
@@ -450,7 +451,7 @@
 
 (defn- consume-option
   ```
-  Consume an option
+  Consumes an option
   ```
   [result orules args i &opt is-short?]
   (def opts (result :opts))
@@ -486,7 +487,7 @@
 
 (defn- consume-param
   ```
-  Consume a parameter
+  Consumes a parameter
   ```
   [result prule args i rem]
   (def params (result :params))
@@ -553,7 +554,7 @@
 
 (defn- parse-args-impl
   ```
-  Internal implementation to allow nested subcommands
+  Parses arguments recursively if necessary to allow nested subcommands
   ```
   [name config]
   (set command name)
@@ -622,7 +623,7 @@
 
 (defn parse-args
   ```
-  Parse the `(dyn :args)` value for a program
+  Parses the `(dyn :args)` value for a program
 
   This function takes a `name` and a `config`. `name` is a string that
   represents the name of the program and is used for usage messages. `config`
