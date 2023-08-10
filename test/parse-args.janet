@@ -92,6 +92,28 @@
   (is (== expect actual)))
 
 
+(deftest parse-subcommand-with-no-subcommand
+  (def msg
+       `Usage: program <subcommand> [<args>]
+
+       Options:
+
+        -h, --help    Show this help message.
+
+       Subcommands:
+
+        example    A subcommand.
+
+       For more information on each subcommand, type 'program help <subcommand>'.`)
+  (def config {:subs ["example" {:rules []
+                                 :help "A subcommand."}]})
+  (def actual
+    (with-dyns [:args @["program"]]
+      (argy-bargy/parse-args "program" config)))
+  (def expect {:cmd "program" :err "" :help (string msg "\n") :opts @{}})
+  (is (== expect actual)))
+
+
 (deftest parse-multiple-subcommands
   (def config {:subs ["foo" {:subs ["bar" {}]}]})
   (def actual

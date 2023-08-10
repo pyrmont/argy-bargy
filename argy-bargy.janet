@@ -515,6 +515,40 @@
     (usage-error "too many parameters passed")))
 
 
+(defn- check-params
+  ```
+  Checks params
+  ```
+  [result params rules]
+  (when (and (empty? err) (empty? help))
+    (def num-params (length params))
+    (var i 0)
+    (def num-rules (length rules))
+    (var j 0)
+    (while (< i num-params)
+      (def rule (get rules j))
+      (set i (consume-param result rule params i (- num-rules j 1)))
+      (++ j))
+    (while (< j num-rules)
+      (def [name rule] (rules j))
+      (if (rule :req?)
+        (do
+          (usage-error (or (rule :proxy) name) " is required")
+          (break))
+        (put-in result [:params name] (rule :default)))
+      (++ j))))
+
+
+(defn- check-subcommand
+  ```
+  Checks subcommands
+  ```
+  [result config]
+  (when (and (empty? err) (empty? help))
+    (unless (or (nil? (config :subs)) (result :sub))
+      (usage config))))
+
+
 # Parsing functions
 
 (defn- parse-args-impl
@@ -581,23 +615,9 @@
     (when (nil? i)
       (break)))
 
-  (when (and (empty? err) (empty? help))
-    (def num-params (length params))
-    (var i 0)
-    (def num-rules (length prules))
-    (var j 0)
-    (while (< i num-params)
-      (def prule (get prules j))
-      (set i (consume-param result prule params i (- num-rules j 1)))
-      (++ j))
-    (while (< j num-rules)
-      (def [name rule] (prules j))
-      (if (rule :req?)
-        (do
-          (usage-error (or (rule :proxy) name) " is required")
-          (break))
-        (put-in result [:params name] (rule :default)))
-      (++ j)))
+  (check-subcommand result config)
+  (check-params result params prules)
+
   result)
 
 (defn parse-args
