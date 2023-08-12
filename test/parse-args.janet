@@ -146,7 +146,7 @@
   (def actual
     (with-dyns [:args @["program" "--help"]]
       (argy-bargy/parse-args "program" config)))
-  (def expect {:cmd "program" :err "" :help (string msg "\n") :opts @{} :params @{}})
+  (def expect {:cmd "program" :err "" :help (string msg "\n") :opts @{"help" true} :params @{}})
   (is (== expect actual)))
 
 
@@ -165,7 +165,7 @@
   (def actual
     (with-dyns [:args @["program" "--help"]]
       (argy-bargy/parse-args "program" config)))
-  (def expect {:cmd "program" :err "" :help (string msg "\n") :opts @{} :params @{}})
+  (def expect {:cmd "program" :err "" :help (string msg "\n") :opts @{"help" true} :params @{}})
   (is (== expect actual)))
 
 

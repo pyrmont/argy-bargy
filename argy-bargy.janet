@@ -572,7 +572,9 @@
     (def arg (get args i))
     (set i (cond
              (or (= "--help" arg) (= "-h" arg))
-             (usage config)
+             (do
+               (put-in result [:opts "help"] true)
+               (usage config))
 
              (= "--" arg)
              (do
