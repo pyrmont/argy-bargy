@@ -516,28 +516,38 @@
     (usage-error "too many parameters passed")))
 
 
+(defn- check-options
+  ```
+  Checks options
+  ```
+  [result rules]
+  (def opts (result :opts))
+  (each [name rule] rules
+    (when (and (nil? (opts name)) (rule :default))
+      (put-in result [:opts name] (rule :default)))))
+
+
 (defn- check-params
   ```
   Checks params
   ```
   [result params rules]
-  (when (and (empty? err) (empty? help))
-    (def num-params (length params))
-    (var i 0)
-    (def num-rules (length rules))
-    (var j 0)
-    (while (< i num-params)
-      (def rule (get rules j))
-      (set i (consume-param result rule params i (- num-rules j 1)))
-      (++ j))
-    (while (< j num-rules)
-      (def [name rule] (rules j))
-      (if (rule :req?)
-        (do
-          (usage-error (or (rule :proxy) name) " is required")
-          (break))
-        (put-in result [:params name] (rule :default)))
-      (++ j))))
+  (def num-params (length params))
+  (var i 0)
+  (def num-rules (length rules))
+  (var j 0)
+  (while (< i num-params)
+    (def rule (get rules j))
+    (set i (consume-param result rule params i (- num-rules j 1)))
+    (++ j))
+  (while (< j num-rules)
+    (def [name rule] (rules j))
+    (if (rule :req?)
+      (do
+        (usage-error (or (rule :proxy) name) " is required")
+        (break))
+      (put-in result [:params name] (rule :default)))
+    (++ j)))
 
 
 (defn- check-subcommand
@@ -545,9 +555,8 @@
   Checks subcommands
   ```
   [result config]
-  (when (and (empty? err) (empty? help))
-    (unless (or (nil? (config :subs)) (result :sub))
-      (usage config))))
+  (unless (or (nil? (config :subs)) (result :sub))
+    (usage config)))
 
 
 # Parsing functions
@@ -618,8 +627,10 @@
     (when (nil? i)
       (break)))
 
-  (check-subcommand result config)
-  (check-params result params prules)
+  (when (and (empty? err) (empty? help))
+    (check-subcommand result config)
+    (check-options result orules)
+    (check-params result params prules))
 
   result)
 

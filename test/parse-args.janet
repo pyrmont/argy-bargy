@@ -40,6 +40,15 @@
   (is (== expect actual)))
 
 
+(deftest parse-with-option-default
+  (def config {:rules ["--foo" {:kind :single :default :bar}]})
+  (def actual
+    (with-dyns [:args @["program"]]
+      (argy-bargy/parse-args "program" config)))
+  (def expect {:cmd "program" :err "" :help "" :opts @{"foo" :bar} :params {}})
+  (is (== expect actual)))
+
+
 (deftest parse-with-option-avoid
   (def config {:rules [:foo {}]})
   (def actual
