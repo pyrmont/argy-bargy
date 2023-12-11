@@ -523,7 +523,7 @@
   [result rules]
   (def opts (result :opts))
   (each [name rule] rules
-    (when (and (nil? (opts name)) (rule :default))
+    (when (and (rule :default) (nil? (opts name)))
       (put-in result [:opts name] (rule :default)))))
 
 
