@@ -63,8 +63,8 @@
           (errorf "each rule must be struct or table: %p" v))
         (unless (or (keyword? k) ({:flag true :count true :single true :multi true} (v :kind)))
           (errorf "each option rule must be of kind :flag, :count, :single or :multi: %p" v))
-        (when (and (keyword? k) rest-capture? (v :rest?))
-          (errorf "multiple parameter rules cannot capture :rest?: %p" v))
+        (when (and (keyword? k) rest-capture? (v :splat?))
+          (errorf "multiple parameter rules cannot capture :splat? %p" v))
         (cond
           (string? k)
           (let [name (if (string/has-prefix? "--" k) (string/slice k 2) k)]
@@ -76,7 +76,7 @@
           (keyword? k)
           (do
             (array/push prules [k v])
-            (set rest-capture? (v :rest?))))))
+            (set rest-capture? (v :splat?))))))
     (++ i))
 
   (unless help?
@@ -375,7 +375,7 @@
                               (unless (rule :req?) "[")
                               "<"
                               proxy
-                              (when (rule :rest?) "...")
+                              (when (rule :splat?) "...")
                               ">"
                               (unless (rule :req?) "]"))
                       )
@@ -493,7 +493,7 @@
   (def params (result :params))
   (def arg (args i))
   (if-let [[name rule] prule]
-    (if (rule :rest?)
+    (if (rule :splat?)
       (do
         (def vals @[])
         (var j 0)
@@ -695,8 +695,8 @@
     considered to fail parsing and a usage error message is printed instead.
     Instead of a function, a keyword can be provided and Argy-Bargy's converter
     will be used instead. The valid keywords are `:string` and `:integer`.
-  * `:rest?` - Whether this rule should capture all unassigned parameters. Only
-    one parameter rule can have `:rest?` set to `true`.
+  * `:splat?` - Whether this rule should capture all unassigned parameters. Only
+    one parameter rule can have `:splat?` set to `true`.
 
   ### Info
 

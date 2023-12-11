@@ -6,7 +6,8 @@
   :url "https://github.com/pyrmont/argy-bargy"
   :repo "git+https://github.com/pyrmont/argy-bargy"
   :dependencies []
-  :dev-dependencies ["https://github.com/pyrmont/testament"])
+  :dev-dependencies ["https://github.com/pyrmont/documentarian"
+                     "https://github.com/pyrmont/testament"])
 
 (declare-source
   :source ["argy-bargy.janet"])

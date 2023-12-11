@@ -119,8 +119,8 @@ the following keys:
   considered to fail parsing and a usage error message is printed instead.
   Instead of a function, a keyword can be provided and Argy-Bargy's converter
   will be used instead. The valid keywords are `:string` and `:integer`.
-* `:rest?` - Whether this rule should capture all unassigned parameters. Only
-  one parameter rule can have `:rest?` set to `true`.
+* `:splat?` - Whether this rule should capture all unassigned parameters. Only
+  one parameter rule can have `:splat?` set to `true`.
 
 ### Info
 
@@ -156,5 +156,5 @@ are tables containing the values parsed according to the rules. The table
 also includes `:err` and `:help` keys that contain either the error or help
 messages that may have been generated during parsing.
 
-[5]: argy-bargy.janet#L624
+[5]: argy-bargy.janet#L637
 

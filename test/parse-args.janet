@@ -70,7 +70,7 @@
 
 (deftest parse-with-param-capture
   (def config {:rules [:foo {:value :integer}
-                       :bar {:rest? true
+                       :bar {:splat? true
                              :value :integer}
                        :qux {:value :integer}]})
   (def actual
