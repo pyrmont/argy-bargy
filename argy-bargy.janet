@@ -620,6 +620,7 @@
                          (put result :sub subresult)
                          (break)))
                      (do
+                       (put-in result [:opts "help"] true)
                        (set command (string command " " subcommand))
                        (usage subconfig)))
                    (usage-error "unrecognized subcommand '" subcommand "'"))
