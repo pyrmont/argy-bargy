@@ -1,4 +1,4 @@
-(use testament)
+(use ../deps/testament)
 
 
 (import ../argy-bargy)

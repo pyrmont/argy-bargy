@@ -1,4 +1,4 @@
-(use testament)
+(use ../deps/testament)
 
 
 (review ../argy-bargy :prefix "")
