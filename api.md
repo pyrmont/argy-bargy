@@ -144,7 +144,12 @@ struct. Multiple levels of subcommands can be supported by simply having a
 subcommand's `config` struct contain a `:subs` key with a subcommands tuple
 of its own.
 
-In  addition to names and configs, the tuple can contain instances of the
+If the subcommand config struct does not contain a `:rules` key, parsing will
+stop and all subsequent arguments will be returned under an `:args` key. This
+can be useful for situations where the user wants to handle parsing in a
+separate function.
+
+In addition to names and configs, the tuple can contain instances of the
 string "---". When printing usage information, subcommands that were
 separated by a "---" will be separated by a line break.
 
@@ -156,5 +161,5 @@ are tables containing the values parsed according to the rules. The table
 also includes `:err` and `:help` keys that contain either the error or help
 messages that may have been generated during parsing.
 
-[5]: argy-bargy.janet#L644
+[5]: argy-bargy.janet#L646
 

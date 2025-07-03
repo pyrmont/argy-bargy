@@ -123,8 +123,17 @@
   (is (== expect actual)))
 
 
+(deftest parse-subcommand-with-no-rules
+  (def config {:subs ["foo" {}]})
+  (def actual
+    (with-dyns [:args @["program" "foo" "bar" "--baz"]]
+      (argy-bargy/parse-args "program" config)))
+  (def expect {:cmd "program" :err "" :help "" :opts {} :sub {:args ["bar" "--baz"] :cmd "foo"}})
+  (is (== expect actual)))
+
+
 (deftest parse-multiple-subcommands
-  (def config {:subs ["foo" {:subs ["bar" {}]}]})
+  (def config {:subs ["foo" {:rules [] :subs ["bar" {:rules []}]}]})
   (def actual
     (with-dyns [:args @["program" "foo" "bar"]]
       (argy-bargy/parse-args "program" config)))
