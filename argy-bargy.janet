@@ -459,10 +459,11 @@
   ```
   Consumes an option
   ```
-  [result orules args i &opt is-short?]
+  [result orules args i &opt short?]
   (def opts (result :opts))
+  (def shorts (result :shorts))
   (def arg (in args i))
-  (def name (string/slice arg (if is-short? 1 2)))
+  (def name (string/slice arg (if short? 1 2)))
   (if-let [rule (get-rule name orules)
            long-name (rule :name)
            kind (rule :kind)]
@@ -589,6 +590,8 @@
              (or (= "--help" arg) (= "-h" arg))
              (do
                (put-in result [:opts "help"] true)
+               (if (= "-h" arg)
+                 (put-in result [:opts :h?] true))
                (usage config))
 
              (= "--" arg)
