@@ -626,12 +626,12 @@
                        (def subresult (if (nil? (subconfig :rules))
                                         @{:cmd subcommand :args (array/slice (dyn :args) 1)}
                                         (parse-args-impl (string command " " subcommand) subconfig)))
-                       (when (and (empty? err) (empty? help))
-                         (put subresult :cmd subcommand)
-                         (put result :sub subresult)
-                         (break)))
+                       (put subresult :cmd subcommand)
+                       (put result :sub subresult)
+                       (break))
                      (do
                        (put-in result [:opts "help"] true)
+                       (put result :sub @{:cmd subcommand})
                        (set command (string command " " subcommand))
                        (usage subconfig)))
                    (usage-error "unrecognized subcommand '" subcommand "'"))
