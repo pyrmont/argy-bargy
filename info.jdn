@@ -1,0 +1,16 @@
+{:name "argy-bargy"
+ :description "A fancy command-line argument parser for Janet"
+ :author "Michael Camilleri"
+ :license "MIT"
+ :url "https://github.com/pyrmont/argy-bargy"
+ :repo "git+https://github.com/pyrmont/argy-bargy"
+
+ :vendored {
+   "deps" [
+     {:url "https://github.com/pyrmont/testament"
+      :prefix "testament"
+      :include ["lib/testament.janet"
+                "init.janet"
+                "LICENSE"]}]}
+
+ :source {:files ["argy-bargy.janet"]}}
