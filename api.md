@@ -1,4 +1,4 @@
-# Argy-Bargy API
+# argy-bargy API
 
 ## argy-bargy
 
@@ -91,6 +91,7 @@ can have the following keys:
 * `:short` - A single letter that is used with `-` rather than `--` and can
   be combined with other short options (e.g. `-lah`).
 * `:help` - The help text for the option, displayed in the usage message.
+* `:hide?` - Hide the option from the usage message.
 * `:default` - A default value that is used if the option occurs.
 * `:noex?` - Whether to hide the option from the generated usage example.
 * `:value` - A one-argument function that converts the text that is parsed to
@@ -112,6 +113,7 @@ the following keys:
 
 * `:help` - Help text for the parameter, displayed in the usage message.
 * `:default` - Default value that is used if the parameter is not present.
+* `:hide?` - Hide the parameter from the usage message.
 * `:req?` - Whether the parameter is required to be present.
 * `:value` - One-argument function that converts the textual value that is
   parsed to a value that will be returned in the return struct. This function
@@ -161,5 +163,5 @@ are tables containing the values parsed according to the rules. The table
 also includes `:err` and `:help` keys that contain either the error or help
 messages that may have been generated during parsing.
 
-[5]: argy-bargy.janet#L646
+[5]: argy-bargy.janet#L652
 
