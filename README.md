@@ -1,6 +1,9 @@
 # Argy-Bargy
 
-[![Build Status](https://github.com/pyrmont/argy-bargy/workflows/build/badge.svg)](https://github.com/pyrmont/argy-bargy/actions?query=workflow%3Abuild)
+[![Test Status][icon]][status]
+
+[icon]: https://github.com/pyrmont/argy-bargy/workflows/test/badge.svg
+[status]: https://github.com/pyrmont/argy-bargy/actions?query=workflow%3Atest
 
 Argy-Bargy is a fancy argument parsing library for Janet.
 
