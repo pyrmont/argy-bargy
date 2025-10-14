@@ -9,8 +9,8 @@
    "deps" [
      {:url "https://github.com/pyrmont/testament"
       :prefix "testament"
-      :include ["lib/testament.janet"
-                "init.janet"
-                "LICENSE"]}]}
+      :files ["lib/testament.janet"
+              "init.janet"
+              "LICENSE"]}]}
 
  :source {:files ["argy-bargy.janet"]}}
