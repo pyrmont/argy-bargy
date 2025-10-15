@@ -16,6 +16,7 @@ String to use to insert line breaks between argument descriptions
 
 [1]: argy-bargy.janet#L6
 
+
 ## max-width
 
 **number**  | [source][2]
@@ -27,6 +28,7 @@ String to use to insert line breaks between argument descriptions
 Maximum number of columns to use for usage messages
 
 [2]: argy-bargy.janet#L3
+
 
 ## pad-inset
 
@@ -40,6 +42,7 @@ Number of columns to pad argument descriptions from the left
 
 [3]: argy-bargy.janet#L4
 
+
 ## pad-right
 
 **number**  | [source][4]
@@ -51,6 +54,7 @@ Number of columns to pad argument descriptions from the left
 Number of columns to pad argument descriptions from the right
 
 [4]: argy-bargy.janet#L5
+
 
 ## parse-args
 
@@ -163,5 +167,5 @@ are tables containing the values parsed according to the rules. The table
 also includes `:err` and `:help` keys that contain either the error or help
 messages that may have been generated during parsing.
 
-[5]: argy-bargy.janet#L652
+[5]: argy-bargy.janet#L654
 
