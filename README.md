@@ -31,11 +31,10 @@ Argy-Bargy has the following features:
 
 ## Installation
 
-Add the dependency to your `project.janet` file:
+Add the dependency to your `info.jdn` file:
 
 ```janet
-(declare-project
-  :dependencies ["https://github.com/pyrmont/argy-bargy"])
+  :dependencies ["https://github.com/pyrmont/argy-bargy"]
 ```
 
 ## Usage
@@ -64,7 +63,7 @@ Argy-Bargy can be used like this:
 (argy-bargy/parse-args "program" config)
 ```
 
-If the argument is `--help`, the following will be printed to stdout:
+If the argument is `-h`, the following will be printed to stdout:
 
 ```text
 usage: program [--foo <foo>] [--bar] srcs...
@@ -106,7 +105,7 @@ For more information, visit our website at example.com/program.
 (argy-bargy/parse-args "program" config)
 ```
 
-If the argument is `--help`, the following will be printed to stdout:
+If the argument is `-h`, the following will be printed to stdout:
 
 ```text
 usage: program <subcommand> [<args>]
