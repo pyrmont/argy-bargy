@@ -1,15 +1,12 @@
 (use ../deps/testament)
 
-
 (review ../argy-bargy :prefix "")
-
 
 (deftest indent-str-single-line
   (def actual
     (indent-str "hello there" 0 2 0 80))
   (def expect @"  hello there")
   (is (== expect actual)))
-
 
 (deftest indent-str-multiline-to-more-lines
   (def actual
@@ -24,6 +21,5 @@
        line
      ``)
   (is (== expect actual)))
-
 
 (run-tests!)

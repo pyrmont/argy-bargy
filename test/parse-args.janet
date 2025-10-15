@@ -1,8 +1,6 @@
 (use ../deps/testament)
 
-
 (import ../argy-bargy)
-
 
 (deftest parse-with-option-flag
   (def config {:rules ["--foo" {:kind :flag}]})
@@ -12,7 +10,6 @@
   (def expect {:cmd "program" :err "" :help "" :opts @{"foo" true} :params @{}})
   (is (== expect actual)))
 
-
 (deftest parse-with-option-count
   (def config {:rules ["--foo" {:kind :count}]})
   (def actual
@@ -20,7 +17,6 @@
       (argy-bargy/parse-args "program" config)))
   (def expect {:cmd "program" :err "" :help "" :opts @{"foo" 2} :params @{}})
   (is (== expect actual)))
-
 
 (deftest parse-with-option-single
   (def config {:rules ["--foo" {:kind :single}]})
@@ -30,7 +26,6 @@
   (def expect {:cmd "program" :err "" :help "" :opts @{"foo" "bar"} :params @{}})
   (is (== expect actual)))
 
-
 (deftest parse-with-option-multi
   (def config {:rules ["--foo" {:kind :multi}]})
   (def actual
@@ -38,7 +33,6 @@
       (argy-bargy/parse-args "program" config)))
   (def expect {:cmd "program" :err "" :help "" :opts @{"foo" ["bar" "qux"]} :params @{}})
   (is (== expect actual)))
-
 
 (deftest parse-with-option-default
   (def config {:rules ["--foo" {:kind :single :default :bar}]})
@@ -48,7 +42,6 @@
   (def expect {:cmd "program" :err "" :help "" :opts @{"foo" :bar} :params {}})
   (is (== expect actual)))
 
-
 (deftest parse-with-option-avoid
   (def config {:rules [:foo {}]})
   (def actual
@@ -56,7 +49,6 @@
       (argy-bargy/parse-args "program" config)))
   (def expect {:cmd "program" :err "" :help "" :opts @{} :params @{:foo "-foo"}})
   (is (== expect actual)))
-
 
 (deftest parse-with-param-number
   (def config {:rules [:foo {:help "A parameter"
@@ -66,7 +58,6 @@
       (argy-bargy/parse-args "program" config)))
   (def expect {:cmd "program" :err "" :help "" :opts @{} :params @{:foo 1}})
   (is (== expect actual)))
-
 
 (deftest parse-with-param-capture
   (def config {:rules [:foo {:value :integer}
@@ -79,7 +70,6 @@
   (def expect {:cmd "program" :err "" :help "" :opts @{} :params @{:foo 1 :bar [2 3 4] :qux 5}})
   (is (== expect actual)))
 
-
 (deftest parse-with-param-req
   (def msg
     `program: foo is required
@@ -91,7 +81,6 @@
   (def expect {:cmd "program" :err (string msg "\n") :help "" :opts @{} :params @{}})
   (is (== expect actual)))
 
-
 (deftest parse-subcommand-with-option-flag
   (def config {:subs ["example" {:rules ["--foo" {:kind :flag}]}]})
   (def actual
@@ -100,28 +89,17 @@
   (def expect {:cmd "program" :err "" :help "" :opts @{} :sub {:cmd "example" :opts @{"foo" true} :params @{}}})
   (is (== expect actual)))
 
-
 (deftest parse-subcommand-with-no-subcommand
   (def msg
-       `Usage: program <subcommand> [<args>]
-
-       Options:
-
-        -h, --help    Show this help message.
-
-       Subcommands:
-
-        example    A subcommand.
-
-       For more information on each subcommand, type 'program help <subcommand>'.`)
+       `program: no subcommand provided
+       Try 'program --help' for more information.`)
   (def config {:subs ["example" {:rules []
                                  :help "A subcommand."}]})
   (def actual
     (with-dyns [:args @["program"]]
       (argy-bargy/parse-args "program" config)))
-  (def expect {:cmd "program" :err "" :help (string msg "\n") :opts @{}})
+  (def expect {:cmd "program" :err (string msg "\n") :help "" :opts @{}})
   (is (== expect actual)))
-
 
 (deftest parse-subcommand-with-no-rules
   (def config {:subs ["foo" {}]})
@@ -131,7 +109,6 @@
   (def expect {:cmd "program" :err "" :help "" :opts {} :sub {:args ["bar" "--baz"] :cmd "foo"}})
   (is (== expect actual)))
 
-
 (deftest parse-multiple-subcommands
   (def config {:subs ["foo" {:rules [] :subs ["bar" {:rules []}]}]})
   (def actual
@@ -139,7 +116,6 @@
       (argy-bargy/parse-args "program" config)))
   (def expect {:cmd "program" :err "" :help "" :opts @{} :sub {:cmd "foo" :opts @{} :sub @{:cmd "bar" :opts @{} :params @{}}}})
   (is (== expect actual)))
-
 
 (deftest parse-with-usage-error
   (def msg
@@ -151,7 +127,6 @@
       (argy-bargy/parse-args "program" config)))
   (def expect {:cmd "program" :err (string msg "\n") :help "" :opts @{} :params @{}})
   (is (== expect actual)))
-
 
 (deftest parse-with-usage-help
   (def msg
@@ -166,7 +141,6 @@
       (argy-bargy/parse-args "program" config)))
   (def expect {:cmd "program" :err "" :help (string msg "\n") :opts @{"help" true} :params @{}})
   (is (== expect actual)))
-
 
 (deftest parse-with-usage-help-separators
   (def msg
@@ -185,6 +159,5 @@
       (argy-bargy/parse-args "program" config)))
   (def expect {:cmd "program" :err "" :help (string msg "\n") :opts @{"help" true} :params @{}})
   (is (== expect actual)))
-
 
 (run-tests!)

@@ -1,8 +1,6 @@
 (use ../deps/testament)
 
-
 (review ../argy-bargy :prefix "")
-
 
 (deftest consume-param-single
   (def result @{:cmd "program" :opts @{} :params @{}})
@@ -17,6 +15,5 @@
   (def actual result)
   (def expect @{:cmd "program" :opts @{} :params @{:foo "-foo"}})
   (is (== expect actual)))
-
 
 (run-tests!)
