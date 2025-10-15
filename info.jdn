@@ -1,4 +1,5 @@
 {:name "argy-bargy"
+ :version "DEVEL"
  :description "A fancy command-line argument parser for Janet"
  :author "Michael Camilleri"
  :license "MIT"
