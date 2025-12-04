@@ -160,4 +160,32 @@
   (def expect {:cmd "program" :err "" :help (string msg "\n") :opts @{"help" true} :params @{}})
   (is (== expect actual)))
 
+(deftest parse-subcommand-with-short-alias
+  (def config {:subs ["foo" {:short "f"
+                             :rules ["--bar" {:kind :flag}]}]})
+  (def actual
+    (with-dyns [:args @["program" "f" "--bar"]]
+      (argy-bargy/parse-args "program" config)))
+  (def expect {:cmd "program" :err "" :help "" :opts @{} :sub {:cmd "foo" :opts @{"bar" true} :params @{}}})
+  (is (== expect actual)))
+
+(deftest parse-subcommand-help-with-short-alias
+  (def config {:subs ["foo" {:short "f"
+                             :rules []
+                             :help "Run foo."}]})
+  (def actual
+    (with-dyns [:args @["program" "help" "f"]]
+      (argy-bargy/parse-args "program" config)))
+  (is (string/find "foo" (actual :help)))
+  (is (= "foo" (get-in actual [:sub :cmd]))))
+
+(deftest parse-subcommand-usage-shows-short-alias
+  (def config {:subs ["foo" {:short "f"
+                             :rules []
+                             :help "Run foo."}]})
+  (def actual
+    (with-dyns [:args @["program" "--help"]]
+      (argy-bargy/parse-args "program" config)))
+  (is (string/find "f, foo" (actual :help))))
+
 (run-tests!)

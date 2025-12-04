@@ -66,7 +66,7 @@
   (def parser (make-parser {:subs ["example"
                                    {:rules ["--foo" {:kind :flag}]}]}))
   (def actual (get-in parser [:subs "example"]))
-  (def expect {:rules ["--foo" {:kind :flag}]})
+  (def expect {:name "example" :rules ["--foo" {:kind :flag}]})
   (is (== expect actual)))
 
 (deftest parser-multiple-subcommands
@@ -90,15 +90,15 @@
 (deftest parser-subcommand-with-nested-subs
   (def parser (make-parser {:subs ["foo" {:subs ["bar" {}]}]}))
   (def actual (get-in parser [:subs "foo"]))
-  (def expect {:subs ["bar" {}]})
+  (def expect {:name "foo" :subs ["bar" {}]})
   (is (== expect actual)))
 
 (deftest parser-preserves-ordered-subcommands
   (def parser (make-parser {:subs ["clone" {}
                                    "commit" {}]}))
   (def actual (get-in parser [:ordered :subs]))
-  (def expect @[["clone" {}]
-                ["commit" {}]])
+  (def expect @[["clone" {:name "clone"}]
+                ["commit" {:name "commit"}]])
   (is (== expect actual)))
 
 (run-tests!)
