@@ -25,8 +25,10 @@
   Gets the columns of the current terminal
   ```
   [&opt force?]
-  (if (and cols (not force?))
+  (when (and cols (not force?))
     (break cols))
+  (unless (os/isatty)
+    (break max-width))
   (def win? (= :windows (os/which)))
   (def cmd
     (if win?
