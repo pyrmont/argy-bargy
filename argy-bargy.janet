@@ -72,6 +72,18 @@
     (++ i))
   res)
 
+(defn- get-default
+  ```
+  Gets the default value from a rule
+
+  If the default is a function, calls it. Otherwise returns the value as-is.
+  ```
+  [rule]
+  (def dflt (rule :default))
+  (if (function? dflt)
+    (dflt)
+    dflt))
+
 (defn- make-parser
   ```
   Makes the parser used to parse arguments
@@ -280,7 +292,7 @@
     (def usage-help
       (stitch [(rule :help)
                (when (rule :default)
-                 (string "(Default: " (rule :default) ")"))]))
+                 (string "(Default: " (get-default rule) ")"))]))
     (array/push usages [usage-prefix usage-help])
     (set pad (max (+ pad-inset (length usage-prefix)) pad)))
   # print usage descriptions
@@ -317,7 +329,7 @@
         (def usage-help
           (stitch [(rule :help)
                    (when (rule :default)
-                     (string "(Default: " (rule :default) ")"))]))
+                     (string "(Default: " (get-default rule) ")"))]))
         (array/push usages [usage-prefix usage-help])
         (set pad (max (+ pad-inset (length usage-prefix)) pad)))))
   # print usage descriptions
@@ -542,7 +554,7 @@
   (def opts (result :opts))
   (eachp [name rule] (parser :long-opts)
     (when (and (rule :default) (nil? (opts name)))
-      (put-in result [:opts name] (rule :default)))))
+      (put-in result [:opts name] (get-default rule)))))
 
 (defn- check-params
   ```
@@ -564,7 +576,7 @@
       (do
         (usage-error (or (rule :proxy) name) " is required")
         (break))
-      (put-in result [:params name] (rule :default)))
+      (put-in result [:params name] (get-default rule)))
     (++ j)))
 
 (defn- check-subcommand
