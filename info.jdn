@@ -5,13 +5,10 @@
  :license "MIT"
  :url "https://github.com/pyrmont/argy-bargy"
  :repo "git+https://github.com/pyrmont/argy-bargy"
-
- :vendored {
-   "deps" [
-     {:url "https://github.com/pyrmont/testament"
-      :prefix "testament"
-      :files ["lib/testament.janet"
-              "init.janet"
-              "LICENSE"]}]}
-
- :source {:files ["argy-bargy.janet"]}}
+ :vendored [{:name "testament"
+             :url "https://github.com/pyrmont/testament"
+             :prefix "deps/testament"
+             :paths ["lib/testament.janet"
+                     "init.janet"
+                     "LICENSE"]}]
+ :artifacts {:libraries [{:paths "argy-bargy.janet"}]}}
