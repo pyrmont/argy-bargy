@@ -173,11 +173,11 @@
                  "number of elements in subcommands must be even: %p" config-subs)
         (assertf (dictionary? v)
                  "each subcommand must be struct or table: %p" v)
-        (def config (merge v {:name k}))
-        (put subs k config)
-        (when (config :short)
-          (put short-subs (config :short) config))
-        (array/push (ordered :subs) [k config])))
+        (def sub-config (merge v {:name k}))
+        (put subs k sub-config)
+        (when (sub-config :short)
+          (put short-subs (sub-config :short) sub-config))
+        (array/push (ordered :subs) [k sub-config])))
     (++ i))
   # return value
   @{:long-opts long-opts
