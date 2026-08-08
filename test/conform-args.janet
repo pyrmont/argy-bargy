@@ -17,6 +17,11 @@
   (def expect @["ps" "-a" "-u" "-x" "-w" "-w"])
   (is (== expect actual)))
 
+(deftest conform-args-empty-argument
+  (def actual (conform-args ["program" ""]))
+  (def expect @["program" ""])
+  (is (== expect actual)))
+
 (deftest conform-args-handling-beyond-double-dash
   (def actual (conform-args ["ls" "-al" "--" "fun" "-to" "--try=me"]))
   (def expect @["ls" "-a" "-l" "--" "fun" "-to" "--try=me"])
