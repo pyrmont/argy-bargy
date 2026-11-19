@@ -11,4 +11,4 @@
              :paths ["lib/testament.janet"
                      "init.janet"
                      "LICENSE"]}]
- :artifacts {:libraries [{:paths "argy-bargy.janet"}]}}
+ :artifacts {:libraries [{:paths ["argy-bargy.janet"]}]}}
